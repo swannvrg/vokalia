@@ -1,0 +1,1104 @@
+@import "tailwindcss";
+
+/* ============================================================
+   VOKALIA — Design Tokens
+   ============================================================ */
+:root {
+  /* Fonds */
+  --color-bg: #15120F;
+  --color-bg-panel: #1C1814;
+  --color-bg-panel-2: #221D18;
+
+  /* Texte */
+  --color-text: #F2ECE1;
+  --color-text-dim: #C9C1B3;
+  --color-text-muted: #8C8172;
+
+  /* Bordures */
+  --color-border: #332C24;
+
+  /* Accent */
+  --color-accent: #BD5B39;
+  --color-accent-soft: #E0A583;
+  --color-accent-2: #C89B57;
+
+  /* États fonctionnels */
+  --color-success: #9FB98A;
+  --color-warning: var(--color-accent-2);
+  --color-danger: #C0533A;
+
+  /* Typo */
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Hanken Grotesk', sans-serif;
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+
+/* ============================================================
+   Shell (main layout)
+   ============================================================ */
+.shell {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+/* ============================================================
+   Topbar / Header
+   ============================================================ */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 4vw, 4rem);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-panel);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+/* Legacy brand-mark (kept for non-logo pages, but hidden when Logo is used) */
+.brand-mark {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+/* Kicker — replaces the old .eyebrow (no more ALL-CAPS) */
+.kicker {
+  margin: 0 0 0.15rem;
+  color: var(--color-accent-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+}
+
+/* ============================================================
+   Content / Toolbar
+   ============================================================ */
+.content {
+  width: min(1400px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2.2rem 0 4rem;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.toolbar h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 3vw, 2.5rem);
+  font-weight: 440;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.toolbar p {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.actions, .field-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.6rem;
+}
+.button, .select, .input {
+  min-height: 2.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  padding: 0.55rem 0.8rem;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.button:hover {
+  border-color: var(--color-accent);
+}
+.button:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+.button.primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-weight: 600;
+  padding: 0.6rem 1.25rem;
+}
+.button.primary:hover {
+  background: color-mix(in srgb, var(--color-accent) 85%, black);
+  border-color: color-mix(in srgb, var(--color-accent) 85%, black);
+}
+.button.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.button.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-dim);
+}
+.button.ghost:hover {
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.button.danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-panel));
+}
+.button.danger:hover {
+  background: color-mix(in srgb, var(--color-danger) 16%, var(--color-bg-panel));
+  border-color: var(--color-danger);
+}
+
+/* Add appointment button */
+.add-appointment-button {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+.add-appointment-button:hover {
+  background: color-mix(in srgb, var(--color-accent) 85%, black);
+  border-color: color-mix(in srgb, var(--color-accent) 85%, black);
+}
+
+/* ============================================================
+   Inputs / Selects
+   ============================================================ */
+.input, .select {
+  background: var(--color-bg-panel-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 10px;
+}
+.input:focus, .select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+/* Color inputs */
+input[type="color"].input {
+  padding: 0.2rem;
+  width: 3rem;
+  height: 2.55rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* ============================================================
+   Panels / Cards
+   ============================================================ */
+.panel {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-panel);
+}
+.panel h3 {
+  margin: 0 0 0.8rem;
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ============================================================
+   Form fields
+   ============================================================ */
+.field label, .field-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+}
+
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.error {
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg-panel));
+  color: var(--color-danger);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, var(--color-border));
+}
+
+/* ============================================================
+   Toast
+   ============================================================ */
+.toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: min(420px, calc(100vw - 2rem));
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+  border-radius: 10px;
+  background: var(--color-bg-panel);
+  color: var(--color-danger);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  font-size: 0.85rem;
+}
+.toast-success {
+  border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+  color: var(--color-success);
+}
+.toast-error {
+  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+  color: var(--color-danger);
+}
+.toast button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* ============================================================
+   Login
+   ============================================================ */
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: var(--color-bg);
+}
+.login-card {
+  width: min(420px, 100%);
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-bg-panel);
+}
+.login-card h1 {
+  margin: 1.5rem 0 0.4rem;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 440;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.login-card p {
+  color: var(--color-text-dim);
+}
+.login-card .field {
+  margin-top: 1rem;
+}
+.login-card .input {
+  width: 100%;
+}
+.login-card .button {
+  width: 100%;
+  margin-top: 1.2rem;
+}
+.login-invitation {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.login-invitation a {
+  color: var(--color-accent-soft);
+  font-weight: 600;
+  text-decoration: none;
+}
+.login-invitation a:hover {
+  color: var(--color-accent);
+}
+
+/* ============================================================
+   Booking (public RDV page)
+   ============================================================ */
+.booking-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background: var(--color-bg);
+}
+.booking-card {
+  width: min(760px, 100%);
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-bg-panel);
+}
+.booking-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.booking-brand h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 440;
+  letter-spacing: -0.01em;
+}
+.booking-intro {
+  margin: 1.8rem 0 0.4rem;
+  font-size: 1.05rem;
+  color: var(--color-text);
+}
+.booking-meta, .booking-muted {
+  color: var(--color-text-muted);
+}
+.booking-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+.booking-grid .input, .booking-grid .select {
+  width: 100%;
+}
+.booking-slots {
+  margin-top: 1.8rem;
+}
+.booking-slots h2 {
+  margin: 0 0 0.7rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.slot-list {
+  display: grid;
+  gap: 0.55rem;
+  max-height: 19rem;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+.slot-group {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  align-items: center;
+  gap: 0.7rem;
+}
+.slot-group > span {
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.slot-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.slot-choice {
+  border: 1px solid var(--slot-color);
+  border-left: 4px solid var(--slot-color);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--slot-color) 12%, var(--color-bg-panel-2));
+  color: var(--color-text);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+}
+.slot-choice:hover, .slot-choice.selected {
+  background: color-mix(in srgb, var(--slot-color) 25%, var(--color-bg-panel-2));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--slot-color) 30%, transparent);
+}
+.booking-submit {
+  width: 100%;
+  margin-top: 1.5rem;
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.booking-submit:hover {
+  background: color-mix(in srgb, var(--color-accent) 85%, black);
+  border-color: color-mix(in srgb, var(--color-accent) 85%, black);
+}
+.booking-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.booking-success {
+  margin-top: 2rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-bg-panel));
+  color: var(--color-success);
+}
+
+/* ============================================================
+   Timeline / Compact Calendar
+   ============================================================ */
+.timeline-wrap {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-panel);
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.2rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-panel-2);
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text-dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.legend-item i {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+}
+.timeline-head, .timeline-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+}
+.timeline-head {
+  padding: 0.7rem 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--color-bg-panel-2);
+}
+.timeline-row {
+  min-height: 2.75rem;
+  border-top: 1px solid var(--color-border);
+}
+.timeline-row > time {
+  padding: 0.65rem 0.8rem;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--color-border);
+}
+.timeline-events {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.25rem 0.65rem;
+}
+.timeline-free:hover {
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg-panel));
+  cursor: pointer;
+}
+.timeline-event {
+  min-width: 10rem;
+  padding: 0.35rem 0.6rem;
+  overflow: hidden;
+  border: 0;
+  border-left: 3px solid var(--event-color);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--event-color) 12%, var(--color-bg-panel-2));
+  color: var(--color-text);
+  text-align: left;
+}
+.timeline-event strong, .timeline-event span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline-event strong {
+  font-size: 0.78rem;
+}
+.timeline-event span {
+  margin-top: 0.12rem;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+.timeline-event.timeline-block {
+  border-left-color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text-muted) 10%, var(--color-bg-panel-2));
+}
+.timeline-empty {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+/* ============================================================
+   Modal
+   ============================================================ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(10, 8, 6, 0.7);
+}
+.modal {
+  width: min(520px, 100%);
+  max-height: min(90vh, 680px);
+  overflow: auto;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-bg-panel);
+}
+.modal-header, .modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.modal-header {
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.modal-header h3 {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 440;
+  color: var(--color-text);
+}
+.modal-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+  padding: 1rem 0;
+}
+.modal-details span, .modal-note {
+  color: var(--color-text-dim);
+  font-size: 0.78rem;
+}
+.modal-details b {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+}
+.modal-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+.modal-form .field {
+  flex: 1 1 10rem;
+}
+.modal-form .input, .modal-form .select {
+  width: 100%;
+}
+.modal-actions {
+  margin-top: 1.2rem;
+}
+.modal-actions span {
+  flex: 1;
+}
+.confirm-box {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 40%, var(--color-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-panel-2));
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+.confirm-box span {
+  color: var(--color-text-muted);
+}
+
+/* ============================================================
+   Time Picker
+   ============================================================ */
+.time-picker {
+  position: relative;
+}
+.time-picker-trigger {
+  width: 100%;
+  text-align: left;
+}
+.time-picker-trigger::after {
+  content: "▾";
+  float: right;
+  color: var(--color-text-muted);
+}
+.time-picker-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 25;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-panel-2);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+.time-picker-option {
+  display: block;
+  width: 100%;
+  padding: 0.42rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+}
+.time-picker-option:hover, .time-picker-option.selected {
+  background: color-mix(in srgb, var(--color-accent) 15%, var(--color-bg-panel));
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Stat numbers (display font)
+   ============================================================ */
+.stat-big {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 440;
+  color: var(--color-text);
+}
+.stat-label {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* ============================================================
+   WaveIndicator animation
+   ============================================================ */
+@keyframes wave-bar {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.4); }
+}
+.wave-indicator-active rect {
+  animation: wave-bar 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+.wave-indicator-active rect:nth-child(1) { animation-delay: 0s; }
+.wave-indicator-active rect:nth-child(2) { animation-delay: 0.15s; }
+.wave-indicator-active rect:nth-child(3) { animation-delay: 0.3s; }
+.wave-indicator-active rect:nth-child(4) { animation-delay: 0.1s; }
+.wave-indicator-active rect:nth-child(5) { animation-delay: 0.25s; }
+.wave-indicator-active rect:nth-child(6) { animation-delay: 0.05s; }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 650px) {
+  .topbar {
+    align-items: flex-start;
+  }
+  .content {
+    width: min(100% - 1rem, 1400px);
+    padding-top: 1.2rem;
+  }
+  .booking-grid {
+    grid-template-columns: 1fr;
+  }
+  .slot-group {
+    grid-template-columns: 3.5rem 1fr;
+  }
+  .modal-details {
+    grid-template-columns: 1fr 1fr;
+  }
+  .modal-actions {
+    flex-wrap: wrap;
+  }
+  .modal-actions span {
+    display: none;
+  }
+}
+
+/* ============================================================
+   PUBLIC VITRINE — Navigation
+   ============================================================ */
+.vp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem clamp(1rem, 5vw, 4rem);
+  background: color-mix(in srgb, var(--color-bg-panel) 96%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+}
+.vp-nav nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.vp-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+}
+.vp-wordmark {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.vp-nav-link {
+  color: var(--color-text-dim);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.15s;
+}
+.vp-nav-link:hover { color: var(--color-text); }
+.vp-cta-nav {
+  font-size: 0.88rem;
+  padding: 0.5rem 1rem;
+}
+
+/* ============================================================
+   PUBLIC VITRINE — Layout helpers
+   ============================================================ */
+.vp-wrap {
+  width: min(860px, calc(100% - 2.5rem));
+  margin-inline: auto;
+}
+.vp-section {
+  padding: clamp(3rem, 8vw, 5.5rem) 0;
+}
+.vp-section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+  font-weight: 440;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  margin: 0 0 2.5rem;
+}
+.vp-btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 12px;
+}
+
+/* ============================================================
+   PUBLIC VITRINE — Hero
+   ============================================================ */
+.vp-hero {
+  padding: clamp(4rem, 10vw, 8rem) 1.25rem clamp(3rem, 8vw, 6rem);
+  text-align: center;
+}
+.vp-hero-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 680px;
+  margin-inline: auto;
+}
+.vp-hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-weight: 440;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.15;
+}
+.vp-hero-sub {
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  color: var(--color-text-dim);
+  line-height: 1.65;
+  margin: 0;
+  max-width: 560px;
+}
+.vp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+/* ============================================================
+   PUBLIC VITRINE — Two-ways cards
+   ============================================================ */
+.vp-two-ways {
+  background: var(--color-bg-panel);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.vp-cards-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+@media (max-width: 640px) {
+  .vp-cards-2 { grid-template-columns: 1fr; }
+}
+.vp-card {
+  background: var(--color-bg-panel-2);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: 1.75rem;
+}
+.vp-card-icon {
+  margin-bottom: 1rem;
+}
+.vp-card h3 {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.6rem;
+}
+.vp-card p {
+  color: var(--color-text-dim);
+  line-height: 1.65;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ============================================================
+   PUBLIC VITRINE — Steps
+   ============================================================ */
+.vp-steps-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+.vp-step {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+.vp-step-num {
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin-top: 0.1rem;
+}
+.vp-step h3 {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.35rem;
+}
+.vp-step p {
+  color: var(--color-text-dim);
+  line-height: 1.6;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ============================================================
+   PUBLIC VITRINE — About section
+   ============================================================ */
+.vp-about {
+  background: var(--color-bg-panel);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.vp-about-text {
+  color: var(--color-text-dim);
+  line-height: 1.65;
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+.vp-about-text a {
+  color: var(--color-accent-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.vp-about-cta {
+  margin-top: 1.5rem;
+}
+
+/* ============================================================
+   PUBLIC VITRINE — Legal page
+   ============================================================ */
+.vp-legal-page {
+  padding: clamp(2.5rem, 6vw, 5rem) 1.25rem clamp(3rem, 6vw, 6rem);
+}
+.vp-legal-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4vw, 2.8rem);
+  font-weight: 440;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  margin: 0 0 3rem;
+}
+.vp-legal-section {
+  margin-bottom: 2.75rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 2.75rem;
+}
+.vp-legal-section:last-of-type {
+  border-bottom: none;
+}
+.vp-legal-section h2 {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-accent-soft);
+  margin: 0 0 1rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.vp-legal-section p {
+  color: var(--color-text-dim);
+  line-height: 1.7;
+  margin: 0 0 0.85rem;
+  font-size: 0.97rem;
+}
+.vp-legal-section p:last-child { margin-bottom: 0; }
+.vp-legal-section a {
+  color: var(--color-accent-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.vp-legal-dl {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 0.55rem 1rem;
+  margin: 0.75rem 0 0;
+}
+.vp-legal-dl dt {
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+  padding-top: 0.05rem;
+}
+.vp-legal-dl dd {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.vp-legal-dl a {
+  color: var(--color-accent-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.vp-legal-back {
+  margin-top: 3rem;
+}
+.vp-legal-back a {
+  color: var(--color-text-dim);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.vp-legal-back a:hover { color: var(--color-text); }
+
+@media (max-width: 480px) {
+  .vp-legal-dl {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+  .vp-legal-dl dt { margin-top: 0.75rem; }
+}
+
+/* ============================================================
+   PUBLIC VITRINE — Footer
+   ============================================================ */
+.public-footer {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-panel);
+  padding: 1.5rem clamp(1rem, 5vw, 4rem);
+}
+.public-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  max-width: 1200px;
+  margin-inline: auto;
+}
+.public-footer-inner strong {
+  color: var(--color-text-dim);
+  font-weight: 600;
+}
+.public-footer-inner a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.public-footer-inner a:hover { color: var(--color-text); }
+
