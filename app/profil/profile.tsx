@@ -232,7 +232,7 @@ export default function Profile() {
           <span className="brand-wordmark">vokalia</span>
         </div>
         <div className="actions">
-          <button className="button" onClick={() => router.push("/")}>
+          <button className="button" onClick={() => router.push("/calendrier")}>
             Planning
           </button>
           <button
@@ -331,16 +331,16 @@ export default function Profile() {
                         setHours((current) =>
                           event.target.checked
                             ? [
-                                ...current,
-                                {
-                                  day_of_week: index + 1,
-                                  open_time: "09:00",
-                                  close_time: "19:00",
-                                },
-                              ]
+                              ...current,
+                              {
+                                day_of_week: index + 1,
+                                open_time: "09:00",
+                                close_time: "19:00",
+                              },
+                            ]
                             : current.filter(
-                                (item) => item.day_of_week !== index + 1,
-                              ),
+                              (item) => item.day_of_week !== index + 1,
+                            ),
                         )
                       }
                     />{" "}
@@ -549,9 +549,9 @@ export default function Profile() {
                     current.map((item) =>
                       item.id === service.id
                         ? {
-                            ...item,
-                            duration_minutes: Number(event.target.value),
-                          }
+                          ...item,
+                          duration_minutes: Number(event.target.value),
+                        }
                         : item,
                     ),
                   )
@@ -569,12 +569,12 @@ export default function Profile() {
                     current.map((item) =>
                       item.id === service.id
                         ? {
-                            ...item,
-                            price:
-                              event.target.value === ""
-                                ? null
-                                : Number(event.target.value),
-                          }
+                          ...item,
+                          price:
+                            event.target.value === ""
+                              ? null
+                              : Number(event.target.value),
+                        }
                         : item,
                     ),
                   )

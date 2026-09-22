@@ -7,7 +7,7 @@ export default async function AdminPage() {
   try {
     ({ supabase } = await requireAdmin());
   } catch (error) {
-    if (error instanceof Error && error.message === "FORBIDDEN") redirect("/");
+    if (error instanceof Error && error.message === "FORBIDDEN") redirect("/calendrier");
     if (error instanceof Error && error.message === "UNAUTHENTICATED") redirect("/login");
     throw error;
   }

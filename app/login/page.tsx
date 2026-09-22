@@ -15,7 +15,7 @@ export default function LoginPage() {
   async function submit(event: FormEvent) {
     event.preventDefault(); setLoading(true); setError("");
     const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
-    if (!response.ok) setError("Email ou mot de passe incorrect."); else { const result = await response.json(); router.replace(result.role === "admin" ? "/admin" : "/"); }
+    if (!response.ok) setError("Email ou mot de passe incorrect."); else { const result = await response.json(); router.replace(result.role === "admin" ? "/admin" : "/calendrier"); }
     setLoading(false);
   }
 

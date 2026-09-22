@@ -50,6 +50,9 @@ export default function HomePage() {
           <a href="#comment-ca-marche" className="vp-nav-link">
             Comment ça marche
           </a>
+          <Link href="/login" className="vp-nav-link">
+            Espace pro
+          </Link>
           <Link href="/demande-invitation" className="button primary vp-cta-nav">
             Demander une invitation
           </Link>
