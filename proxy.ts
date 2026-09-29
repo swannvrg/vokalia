@@ -10,6 +10,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!$|mentions-legales|login|prendre-rdv|demande-invitation|invitation|api/auth|api/public|api/invitations|sitemap.xml|robots.txt|_next/static|_next/image|favicon.ico|icon.svg).*)",
+    "/((?!$|mentions-legales|login|prendre-rdv|demande-invitation|invitation|api/auth|api/public|api/invitations|api/callback-notify|sitemap.xml|robots.txt|_next/static|_next/image|favicon.ico|icon.svg).*)",
   ],
 };
