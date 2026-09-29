@@ -13,9 +13,33 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   async function submit(event: FormEvent) {
-    event.preventDefault(); setLoading(true); setError("");
-    const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
-    if (!response.ok) setError("Email ou mot de passe incorrect."); else { const result = await response.json(); router.replace(result.role === "admin" ? "/admin" : "/calendrier"); }
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!response.ok) {
+      setError("Email ou mot de passe incorrect.");
+    } else {
+      const result = await response.json();
+      const redirectParam =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect")
+          : null;
+
+      if (redirectParam && redirectParam.startsWith("/")) {
+        router.replace(redirectParam);
+      } else if (result.role === "admin") {
+        router.replace("/admin");
+      } else if (result.businessId) {
+        router.replace(`/${result.businessId}/calendrier`);
+      } else {
+        router.replace("/calendrier");
+      }
+    }
     setLoading(false);
   }
 

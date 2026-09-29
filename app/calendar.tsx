@@ -55,7 +55,13 @@ const timeOptionsFor = (opening: CalendarData["opening"]) => {
 const firstTimeFor = (opening: CalendarData["opening"]) =>
   timeOptionsFor(opening)[0] || "";
 
-export default function Calendar({ initialDate }: { initialDate: string }) {
+export default function Calendar({
+  initialDate,
+  businessId,
+}: {
+  initialDate: string;
+  businessId?: string;
+}) {
   const router = useRouter();
   const [date, setDate] = useState(initialDate);
   const [data, setData] = useState<CalendarData | null>(null);
@@ -75,7 +81,9 @@ export default function Calendar({ initialDate }: { initialDate: string }) {
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const response = await fetch(`/api/calendar?date=${date}`);
+    const query = new URLSearchParams({ date });
+    if (businessId) query.set("businessId", businessId);
+    const response = await fetch(`/api/calendar?${query.toString()}`);
     if (response.status === 401) return router.replace("/login");
     const result = await response.json();
     startTransition(() => {
@@ -86,7 +94,7 @@ export default function Calendar({ initialDate }: { initialDate: string }) {
         setError("");
       }
     });
-  }, [date, router]);
+  }, [businessId, date, router]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -103,10 +111,11 @@ export default function Calendar({ initialDate }: { initialDate: string }) {
     [data],
   );
   async function action(body: object) {
+    const payload = businessId ? { ...body, businessId } : body;
     const response = await fetch("/api/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
     const result = await response.json();
     if (!response.ok) setError(result.error);
@@ -193,9 +202,26 @@ export default function Calendar({ initialDate }: { initialDate: string }) {
           >
             Ajouter un rendez-vous
           </button>
-          <button className="button" onClick={() => router.push("/profil")}>
+          <button
+            className="button"
+            onClick={() =>
+              router.push(businessId ? `/${businessId}/profil` : "/profil")
+            }
+          >
             Profil
           </button>
+          {businessId && (
+            <a
+              className="button ghost"
+              href={`/${businessId}/profil-public`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ textDecoration: "none" }}
+              title="Voir la fiche publique du salon"
+            >
+              Fiche publique ↗
+            </a>
+          )}
           <button
             className="button ghost"
             onClick={async () => {
@@ -357,6 +383,7 @@ export default function Calendar({ initialDate }: { initialDate: string }) {
         )}
         {addAppointmentOpen && data && (
           <AddAppointmentModal
+            businessId={businessId}
             date={date}
             opening={data.opening}
             resources={data.resources}
@@ -375,6 +402,7 @@ export default function Calendar({ initialDate }: { initialDate: string }) {
 }
 
 function AddAppointmentModal({
+  businessId,
   date: initialDate,
   opening: initialOpening,
   resources,
@@ -383,6 +411,7 @@ function AddAppointmentModal({
   onCreated,
   onError,
 }: {
+  businessId?: string;
   date: string;
   opening: CalendarData["opening"];
   resources: CalendarData["resources"];
@@ -403,7 +432,9 @@ function AddAppointmentModal({
 
   useEffect(() => {
     if (date === initialDate) return;
-    fetch(`/api/calendar?date=${date}`)
+    const query = new URLSearchParams({ date });
+    if (businessId) query.set("businessId", businessId);
+    fetch(`/api/calendar?${query.toString()}`)
       .then((response) => response.json())
       .then((result) =>
         startTransition(() => {
@@ -415,7 +446,7 @@ function AddAppointmentModal({
       .catch(() =>
         onError("Impossible de charger les horaires de cette date."),
       );
-  }, [date, initialDate, onError]);
+  }, [businessId, date, initialDate, onError]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -430,6 +461,7 @@ function AddAppointmentModal({
         resourceId,
         serviceId,
         startTime,
+        ...(businessId ? { businessId } : {}),
       }),
     });
     const result = await response.json();

@@ -1,15 +1,33 @@
-import { getBusinessIdForCurrentUser, requireUser } from "@/lib/supabase";
+import { requireUser, resolveAuthorizedBusinessId } from "@/lib/supabase";
 import { isWithinOpeningHours } from "@/lib/business-hours";
 
-function unauthenticated(error: unknown) {
-  return error instanceof Error && error.message === "UNAUTHENTICATED";
+function handleApiError(error: unknown, fallbackMessage: string) {
+  if (error instanceof Error && error.message === "UNAUTHENTICATED") {
+    return Response.json({ error: "Non authentifié." }, { status: 401 });
+  }
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return Response.json({ error: "Accès refusé à ce salon." }, { status: 403 });
+  }
+  if (
+    error instanceof Error &&
+    (error.message === "SALON_NOT_FOUND" || error.message === "NO_BUSINESS")
+  ) {
+    return Response.json({ error: "Salon introuvable." }, { status: 404 });
+  }
+  console.error(error);
+  return Response.json({ error: fallbackMessage }, { status: 500 });
 }
 
 export async function POST(request: Request) {
   try {
     const { supabase, user } = await requireUser();
-    const businessId = await getBusinessIdForCurrentUser(supabase, user.id);
     const body = await request.json();
+    const businessId = await resolveAuthorizedBusinessId(
+      supabase,
+      user,
+      body.businessId,
+    );
+
     const name = String(body.customerName ?? "").trim();
     const phone = String(body.customerPhone ?? "").trim();
     const resourceId = String(body.resourceId ?? "");
@@ -53,8 +71,6 @@ export async function POST(request: Request) {
     }
     return Response.json({ id: data }, { status: 201 });
   } catch (error) {
-    if (unauthenticated(error)) return Response.json({ error: "Non authentifié." }, { status: 401 });
-    console.error(error);
-    return Response.json({ error: "Impossible de créer le rendez-vous." }, { status: 500 });
+    return handleApiError(error, "Impossible de créer le rendez-vous.");
   }
 }

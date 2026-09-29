@@ -7,8 +7,14 @@ const PARIS_DATE = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-function isParisDate(value: string, date: string) {
-  return PARIS_DATE.format(new Date(value)) === date;
+function isParisDate(value: string | null | undefined, date: string) {
+  if (!value) return false;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) {
+    console.log("Date invalide :", JSON.stringify(value));
+    return false;
+  }
+  return PARIS_DATE.format(d) === date;
 }
 
 export async function getCalendarData(

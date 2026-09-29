@@ -1,17 +1,23 @@
-import { requireUser } from "@/lib/supabase";
+import { getBusinessIdForCurrentUser, requireUser } from "@/lib/supabase";
 import { redirect } from "next/navigation";
-import Calendar from "@/app/calendar";
-
-const parisDate = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(
-    new Date(),
-  );
 
 export default async function CalendrierPage() {
+  let user;
+  let supabase;
   try {
-    await requireUser();
+    ({ supabase, user } = await requireUser());
   } catch {
     redirect("/login");
   }
-  return <Calendar initialDate={parisDate()} />;
+
+  if (user.role === "admin") {
+    redirect("/admin");
+  }
+
+  try {
+    const businessId = await getBusinessIdForCurrentUser(supabase, user.id);
+    redirect(`/${businessId}/calendrier`);
+  } catch {
+    redirect("/login");
+  }
 }

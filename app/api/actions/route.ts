@@ -1,12 +1,23 @@
-import { getBusinessIdForCurrentUser, requireUser } from "@/lib/supabase";
+import { requireUser, resolveAuthorizedBusinessId } from "@/lib/supabase";
 import { isWithinOpeningHours } from "@/lib/business-hours";
 
 export async function POST(request: Request) {
   const body = await request.json();
   try {
     const { supabase, user } = await requireUser();
-    const businessId = await getBusinessIdForCurrentUser(supabase, user.id);
+    const businessId = await resolveAuthorizedBusinessId(
+      supabase,
+      user,
+      body.businessId,
+    );
     if (body.action === "cancel") {
+      const { data: appt } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("id", body.appointmentId)
+        .eq("business_id", businessId)
+        .maybeSingle();
+      if (!appt) return Response.json({ error: "Rendez-vous introuvable." }, { status: 404 });
       const { data, error } = await supabase.rpc("cancel_appointment", { p_appointment_id: body.appointmentId });
       if (error) throw error;
       return Response.json({ ok: Boolean(data) });
@@ -70,6 +81,15 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHENTICATED") {
       return Response.json({ error: "Non authentifié." }, { status: 401 });
+    }
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return Response.json({ error: "Accès refusé à ce salon." }, { status: 403 });
+    }
+    if (
+      error instanceof Error &&
+      (error.message === "SALON_NOT_FOUND" || error.message === "NO_BUSINESS")
+    ) {
+      return Response.json({ error: "Salon introuvable." }, { status: 404 });
     }
     console.error(error);
     return Response.json({ error: "L'opération a échoué." }, { status: 500 });

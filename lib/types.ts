@@ -11,6 +11,9 @@ export type Service = {
   name: string;
   duration_minutes: number;
   price: number | null;
+  active?: boolean;
+  is_default?: boolean;
+  combo_service_id?: string | null;
 };
 
 export type Appointment = {

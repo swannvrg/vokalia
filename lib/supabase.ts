@@ -94,3 +94,40 @@ export async function requireAdmin() {
   if (session.user.role !== "admin") throw new Error("FORBIDDEN");
   return session;
 }
+
+export async function resolveAuthorizedBusinessId(
+  supabase: AppClient,
+  user: { id: string; role?: string },
+  requestedBusinessId?: string | null,
+): Promise<string> {
+  const ownBusinessId = await getBusinessIdForCurrentUser(supabase, user.id).catch(
+    () => null,
+  );
+
+  // Cas utilisateur classique (coiffeur) :
+  if (user.role !== "admin") {
+    if (!ownBusinessId) {
+      throw new Error("NO_BUSINESS");
+    }
+    // Protection anti-IDOR stricte : interdiction de manipuler un salon tiers
+    if (requestedBusinessId && requestedBusinessId !== ownBusinessId) {
+      throw new Error("FORBIDDEN");
+    }
+    return ownBusinessId;
+  }
+
+  // Cas administrateur :
+  if (requestedBusinessId) {
+    const { data: business, error } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("id", requestedBusinessId)
+      .eq("status", "active")
+      .maybeSingle();
+    if (error || !business) throw new Error("SALON_NOT_FOUND");
+    return business.id;
+  }
+
+  if (ownBusinessId) return ownBusinessId;
+  throw new Error("NO_BUSINESS");
+}

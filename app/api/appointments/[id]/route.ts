@@ -1,16 +1,34 @@
-import { getBusinessIdForCurrentUser, requireUser } from "@/lib/supabase";
+import { requireUser, resolveAuthorizedBusinessId } from "@/lib/supabase";
 import { isWithinOpeningHours } from "@/lib/business-hours";
 
-function unauthenticated(error: unknown) {
-  return error instanceof Error && error.message === "UNAUTHENTICATED";
+function handleApiError(error: unknown, fallbackMessage: string) {
+  if (error instanceof Error && error.message === "UNAUTHENTICATED") {
+    return Response.json({ error: "Non authentifié." }, { status: 401 });
+  }
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return Response.json({ error: "Accès refusé à ce salon." }, { status: 403 });
+  }
+  if (
+    error instanceof Error &&
+    (error.message === "SALON_NOT_FOUND" || error.message === "NO_BUSINESS")
+  ) {
+    return Response.json({ error: "Salon introuvable." }, { status: 404 });
+  }
+  console.error(error);
+  return Response.json({ error: fallbackMessage }, { status: 500 });
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, user } = await requireUser();
-    const businessId = await getBusinessIdForCurrentUser(supabase, user.id);
     const { id } = await context.params;
     const body = await request.json();
+    const businessId = await resolveAuthorizedBusinessId(
+      supabase,
+      user,
+      body.businessId,
+    );
+
     const { data: appointment, error: appointmentError } = await supabase
       .from("appointments")
       .select("id, business_id, resource_id, service_id, start_time, end_time, party_size, status, booked_by")
@@ -67,21 +85,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       .from("appointments")
       .update({ resource_id: resourceId, service_id: service.id, start_time: start.toISOString(), end_time: end.toISOString() })
       .eq("id", id)
+      .eq("business_id", businessId)
       .select("id, resource_id, start_time, end_time, service_id")
       .single();
     if (error) throw error;
     return Response.json(data);
   } catch (error) {
-    if (unauthenticated(error)) return Response.json({ error: "Non authentifié." }, { status: 401 });
-    console.error(error);
-    return Response.json({ error: "Impossible de modifier le rendez-vous." }, { status: 500 });
+    return handleApiError(error, "Impossible de modifier le rendez-vous.");
   }
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, user } = await requireUser();
-    const businessId = await getBusinessIdForCurrentUser(supabase, user.id);
+    const url = new URL(request.url);
+    const businessId = await resolveAuthorizedBusinessId(
+      supabase,
+      user,
+      url.searchParams.get("businessId"),
+    );
     const { id } = await context.params;
     const { data: appointment } = await supabase.from("appointments").select("id").eq("id", id).eq("business_id", businessId).maybeSingle();
     if (!appointment) return Response.json({ error: "Ce rendez-vous est introuvable." }, { status: 404 });
@@ -90,8 +112,6 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     if (!data) return Response.json({ error: "Ce rendez-vous est déjà annulé ou introuvable." }, { status: 404 });
     return Response.json({ ok: true });
   } catch (error) {
-    if (unauthenticated(error)) return Response.json({ error: "Non authentifié." }, { status: 401 });
-    console.error(error);
-    return Response.json({ error: "Impossible d'annuler le rendez-vous." }, { status: 500 });
+    return handleApiError(error, "Impossible d'annuler le rendez-vous.");
   }
 }
