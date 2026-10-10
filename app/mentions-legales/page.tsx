@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PublicFooter from "@/app/components/PublicFooter";
+import Logo from "@/app/components/Logo";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
@@ -13,22 +14,7 @@ export default function MentionsLegalesPage() {
     <>
       <header className="vp-nav">
         <a href="/" className="vp-brand" aria-label="Vokalia — accueil">
-          <svg
-            viewBox="0 0 64 64"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            width={28}
-            height={28}
-            aria-hidden="true"
-          >
-            <path
-              d="M14 24C14 17.373 19.373 12 26 12H38C46.837 12 54 19.163 54 28C54 36.837 46.837 44 38 44H24L15 52V38.5C14.36 36.1 14 33.5 14 30.8V24Z"
-              fill="#BD5B39"
-            />
-            <rect x="24" y="22" width="4" height="16" rx="2" fill="#15120F" />
-            <rect x="32" y="17" width="4" height="26" rx="2" fill="#15120F" />
-            <rect x="40" y="25" width="4" height="10" rx="2" fill="#15120F" />
-          </svg>
+          <Logo size={28} />
           <span className="vp-wordmark">vokalia</span>
         </a>
         <nav aria-label="Navigation principale">

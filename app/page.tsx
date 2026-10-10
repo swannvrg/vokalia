@@ -15,27 +15,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-// Logo SVG inline — bulle-onde Vokalia
-function LogoSvg({ size = 48 }: { size?: number }) {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      aria-hidden="true"
-    >
-      <path
-        d="M14 24C14 17.373 19.373 12 26 12H38C46.837 12 54 19.163 54 28C54 36.837 46.837 44 38 44H24L15 52V38.5C14.36 36.1 14 33.5 14 30.8V24Z"
-        fill="#BD5B39"
-      />
-      <rect x="24" y="22" width="4" height="16" rx="2" fill="#15120F" />
-      <rect x="32" y="17" width="4" height="26" rx="2" fill="#15120F" />
-      <rect x="40" y="25" width="4" height="10" rx="2" fill="#15120F" />
-    </svg>
-  );
-}
+import Logo from "@/app/components/Logo";
 
 export default function HomePage() {
   return (
@@ -43,7 +23,7 @@ export default function HomePage() {
       {/* ============ HEADER NAV ============ */}
       <header className="vp-nav">
         <a href="/" className="vp-brand" aria-label="Vokalia — accueil">
-          <LogoSvg size={32} />
+          <Logo size={32} />
           <span className="vp-wordmark">vokalia</span>
         </a>
         <nav aria-label="Navigation principale">
@@ -63,7 +43,7 @@ export default function HomePage() {
         {/* ============ HERO ============ */}
         <section className="vp-hero">
           <div className="vp-hero-inner">
-            <LogoSvg size={64} />
+            <Logo size={64} />
             <h1 className="vp-hero-title">
               Votre salon ne rate plus un appel.
             </h1>

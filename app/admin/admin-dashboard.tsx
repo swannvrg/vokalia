@@ -56,7 +56,7 @@ export default function AdminDashboard({ initialRequests, businesses }: { initia
               <div>
                 <strong>{item.salon_name}</strong>
                 <div>{item.contact_name} · {item.email}</div>
-                <small style={{ color: "var(--color-text-muted)" }}>{new Date(item.created_at).toLocaleDateString("fr-FR")}{item.phone ? ` · ${item.phone}` : ""}</small>
+                <small style={{ color: "var(--color-text-muted)" }}>{new Date(item.created_at).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}{item.phone ? ` · ${item.phone}` : ""}</small>
               </div>
               <div className="actions">
                 <button className="button primary" onClick={() => processRequest(item.id, "approve")}>Accepter la demande</button>

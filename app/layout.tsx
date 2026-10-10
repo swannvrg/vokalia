@@ -36,7 +36,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" className={`${fraunces.variable} ${hankenGrotesk.variable}`}>
-      <body>{children}</body>
+      <body>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-[#15120F] focus:text-[#BD5B39]">Aller au contenu</a>
+        {children}
+      </body>
     </html>
   );
 }

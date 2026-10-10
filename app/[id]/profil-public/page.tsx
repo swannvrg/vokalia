@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase";
 import Logo from "@/app/components/Logo";
 import PublicFooter from "@/app/components/PublicFooter";
+import { formatPhoneDisplay } from "@/app/components/CallbackPanel";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -96,13 +97,15 @@ export default async function PublicSalonProfilePage({
   const openingHours = hours ?? [];
 
   // Indexer les horaires par day_of_week (0 = Lundi ... 6 = Dimanche)
+  const zeroBased = openingHours.some((h) => Number(h.day_of_week) === 0);
   const hoursByDay = new Map<
     number,
     { open_time: string; close_time: string }
   >();
   for (const h of openingHours) {
     if (h.open_time && h.close_time) {
-      hoursByDay.set(h.day_of_week, {
+      const normalizedDay = zeroBased ? Number(h.day_of_week) : Number(h.day_of_week) - 1;
+      hoursByDay.set(normalizedDay, {
         open_time: h.open_time.slice(0, 5),
         close_time: h.close_time.slice(0, 5),
       });
@@ -183,7 +186,7 @@ export default async function PublicSalonProfilePage({
                 }}
               >
                 <span>📞</span>
-                <span>{business.real_phone_number}</span>
+                <span>{formatPhoneDisplay(business.real_phone_number)}</span>
               </a>
             )}
           </div>

@@ -3,6 +3,18 @@ import { isWithinOpeningHours } from "@/lib/business-hours";
 
 const parisDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
 
+function parisOffset(localDate: string, localTime: string): string {
+  const approx = new Date(`${localDate}T${localTime}:00Z`);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Paris",
+    timeZoneName: "longOffset",
+  });
+  const parts = formatter.formatToParts(approx);
+  const tzPart = parts.find((p) => p.type === "timeZoneName");
+  const match = tzPart?.value.match(/GMT([+-]\d{2}:\d{2})/);
+  return match ? match[1] : "+01:00";
+}
+
 async function getBusiness(supabase: ReturnType<typeof createSupabaseAdminClient>, businessId: string) {
   const { data, error } = await supabase.from("businesses").select("id, name, real_phone_number, address, timezone").eq("id", businessId).eq("status", "active").single();
   if (error) throw error;
@@ -33,7 +45,7 @@ export async function GET(request: Request) {
         p_service_id: serviceId,
         p_resource_id: resourceId,
         p_party_size: "1",
-        p_search_from: `${date}T00:00:00+02:00`,
+        p_search_from: `${date}T00:00:00${parisOffset(date, "00:00")}`,
         p_search_days: 1,
         p_slot_increment_minutes: 15,
         p_max_results: 300,

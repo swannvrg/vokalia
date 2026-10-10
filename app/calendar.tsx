@@ -12,11 +12,36 @@ import Toast from "@/app/components/toast";
 import Logo from "@/app/components/Logo";
 import WaveIndicator from "@/app/components/WaveIndicator";
 import { useRouter } from "next/navigation";
+import CallbackPanel from "@/app/components/CallbackPanel";
 
 const parisDate = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(
     new Date(),
   );
+
+/**
+ * Compute the UTC offset string (e.g. "+02:00" or "+01:00") for Europe/Paris
+ * at a given local date and time. Handles CET/CEST transitions automatically.
+ */
+function parisOffset(localDate: string, localTime: string): string {
+  // Build an approximate UTC date to seed the formatter
+  const approx = new Date(`${localDate}T${localTime}:00Z`);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Paris",
+    timeZoneName: "longOffset",
+  });
+  const parts = formatter.formatToParts(approx);
+  const tzPart = parts.find((p) => p.type === "timeZoneName");
+  // tzPart.value is like "GMT+02:00" or "GMT+01:00"
+  const match = tzPart?.value.match(/GMT([+-]\d{2}:\d{2})/);
+  return match ? match[1] : "+01:00";
+}
+
+/** Build an ISO string from a Europe/Paris local date + time. */
+function parisToISO(localDate: string, localTime: string): string {
+  const offset = parisOffset(localDate, localTime);
+  return new Date(`${localDate}T${localTime}:00${offset}`).toISOString();
+}
 const displayDate = (date: string) =>
   new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
@@ -197,7 +222,7 @@ export default function Calendar({
         </div>
         <div className="actions">
           <button
-            className="button add-appointment-button"
+            className="button primary"
             onClick={() => setAddAppointmentOpen(true)}
           >
             Ajouter un rendez-vous
@@ -309,6 +334,7 @@ export default function Calendar({
             </div>
           </div>
         </div>
+        <CallbackPanel businessId={businessId} onError={setError} />
         {!loaded ? (
           <div className="empty">Chargement du planning...</div>
         ) : !data?.opening ? (
@@ -451,7 +477,7 @@ function AddAppointmentModal({
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
-    const startTime = new Date(`${date}T${time}:00+02:00`).toISOString();
+    const startTime = parisToISO(date, time);
     const response = await fetch("/api/appointments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -588,7 +614,7 @@ function AddAppointmentModal({
             Fermer
           </button>
           <button
-            className="button add-appointment-button"
+            className="button primary"
             disabled={saving || !opening || !time}
           >
             {saving ? "Création..." : "Créer le RDV"}
@@ -693,7 +719,7 @@ function CompactCalendar({
         const rowAppointments = appointments.filter(
           (item) => formatTime(item.start_time) === time,
         );
-        const start = new Date(`${data.date}T${time}:00+02:00`).toISOString();
+        const start = parisToISO(data.date, time);
         const canBlock =
           selectedResource !== "all" &&
           available.has(time) &&
@@ -702,7 +728,15 @@ function CompactCalendar({
           <div
             className={`timeline-row ${canBlock ? "timeline-free" : ""}`}
             key={time}
+            role={canBlock ? "button" : undefined}
+            tabIndex={canBlock ? 0 : undefined}
             onClick={() => canBlock && onFree(start)}
+            onKeyDown={(e) => {
+              if (canBlock && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                onFree(start);
+              }
+            }}
           >
             <time>{time}</time>
             <div className="timeline-events">
@@ -719,6 +753,7 @@ function CompactCalendar({
                       } as React.CSSProperties
                     }
                     key={appointment.id}
+                    aria-label={`RDV ${appointment.booked_by === "block" ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${time}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       onOccupied(appointment.id);
@@ -791,9 +826,10 @@ function AppointmentModal({
     setSaving(true);
     await onSave(
       appointment.id,
-      new Date(
-        `${new Date(appointment.start_time).toISOString().slice(0, 10)}T${time}:00+02:00`,
-      ).toISOString(),
+      parisToISO(
+        new Date(appointment.start_time).toISOString().slice(0, 10),
+        time,
+      ),
       serviceId,
       resourceId,
     );
