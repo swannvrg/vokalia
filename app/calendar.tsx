@@ -10,8 +10,8 @@ import {
 import type { CalendarData } from "@/lib/types";
 import Toast from "@/app/components/toast";
 import Logo from "@/app/components/Logo";
+import DashboardShell from "@/app/components/DashboardShell";
 import WaveIndicator from "@/app/components/WaveIndicator";
-import { useRouter } from "next/navigation";
 import CallbackPanel from "@/app/components/CallbackPanel";
 
 const parisDate = () =>
@@ -214,51 +214,10 @@ export default function Calendar({
   }
 
   return (
-    <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <Logo size={28} />
-          <span className="brand-wordmark">vokalia</span>
-        </div>
-        <div className="actions">
-          <button
-            className="button primary"
-            onClick={() => setAddAppointmentOpen(true)}
-          >
-            Ajouter un rendez-vous
-          </button>
-          <button
-            className="button"
-            onClick={() =>
-              router.push(businessId ? `/${businessId}/profil` : "/profil")
-            }
-          >
-            Profil
-          </button>
-          {businessId && (
-            <a
-              className="button ghost"
-              href={`/${businessId}/profil-public`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ textDecoration: "none" }}
-              title="Voir la fiche publique du salon"
-            >
-              Fiche publique ↗
-            </a>
-          )}
-          <button
-            className="button ghost"
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              router.replace("/login");
-            }}
-          >
-            Se déconnecter
-          </button>
-        </div>
-      </header>
-      <div className="content">
+    <DashboardShell
+      businessId={businessId}
+      onAddAppointment={() => setAddAppointmentOpen(true)}
+    >
         {error && (
           <Toast message={error} type="error" onClose={() => setError("")} />
         )}
@@ -422,8 +381,7 @@ export default function Calendar({
             onError={setError}
           />
         )}
-      </div>
-    </main>
+      </DashboardShell>
   );
 }
 

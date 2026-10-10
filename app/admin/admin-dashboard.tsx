@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Logo from "@/app/components/Logo";
+import DashboardShell from "@/app/components/DashboardShell";
 
 type RequestItem = { id: string; salon_name: string; contact_name: string; email: string; phone: string | null; message: string | null; status: string; created_at: string; business_id: string | null };
 type Business = { id: string; name: string; status: string; app_user_id: string | null };
@@ -25,8 +25,7 @@ export default function AdminDashboard({ initialRequests, businesses }: { initia
     router.refresh();
   }
 
-  return <main className="shell"><header className="topbar"><div className="brand"><Logo size={28} /><span className="brand-wordmark">vokalia</span></div><button className="button ghost" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.replace("/login"); }}>Se déconnecter</button></header>
-    <div className="content">
+  return <DashboardShell isAdmin={true}>
       <div className="toolbar">
         <div>
           <p className="kicker">Administration</p>
@@ -75,5 +74,5 @@ export default function AdminDashboard({ initialRequests, businesses }: { initia
           </div>
         ))}
       </section>
-    </div></main>;
+    </DashboardShell>;
 }

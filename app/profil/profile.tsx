@@ -3,7 +3,7 @@
 import { startTransition, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Toast from "@/app/components/toast";
-import Logo from "@/app/components/Logo";
+import DashboardShell from "@/app/components/DashboardShell";
 
 type Business = {
   id: string;
@@ -279,49 +279,9 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
   const effectiveBusinessId = businessId || business?.id;
 
   return (
-    <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <Logo size={28} />
-          <span className="brand-wordmark">vokalia</span>
-        </div>
-        <div className="actions">
-          <button
-            className="button"
-            onClick={() =>
-              router.push(
-                effectiveBusinessId ? `/${effectiveBusinessId}/calendrier` : "/calendrier",
-              )
-            }
-          >
-            Planning
-          </button>
-          {effectiveBusinessId && (
-            <a
-              className="button ghost"
-              href={`/${effectiveBusinessId}/profil-public`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ textDecoration: "none" }}
-              title="Voir la fiche publique du salon"
-            >
-              Fiche publique ↗
-            </a>
-          )}
-          <button
-            className="button ghost"
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              router.replace("/login");
-            }}
-          >
-            Se déconnecter
-          </button>
-        </div>
-      </header>
+    <DashboardShell businessId={effectiveBusinessId}>
       {error && <Toast message={error} type="error" onClose={() => setError("")} />}
       {!error && message && <Toast message={message} type="success" onClose={() => setMessage("")} />}
-      <div className="content">
         <div className="toolbar">
           <div>
             <p className="kicker">Configuration</p>
@@ -1092,7 +1052,6 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
             <button className="button primary" onClick={changePassword}>Mettre à jour le mot de passe</button>
           </div>
         </section>
-      </div>
-    </main>
+      </DashboardShell>
   );
 }
