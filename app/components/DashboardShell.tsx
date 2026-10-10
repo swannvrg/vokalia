@@ -24,13 +24,14 @@ export default function DashboardShell({
   };
 
   const isProfile = pathname?.includes("/profil");
-  const calendarHref = isAdmin ? "/admin" : (businessId ? `/${businessId}/calendrier` : "/calendrier");
+  const calendarHref = businessId ? `/${businessId}/calendrier` : (isAdmin ? "/admin" : "/calendrier");
   const profileHref = businessId ? `/${businessId}/profil` : "/profil";
+  const showNavLinks = !isAdmin || businessId;
 
   return (
-    <main className="shell pb-20 md:pb-0">
+    <main className="shell pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
       <header className="topbar">
-        <Link href="/" className="brand" style={{ textDecoration: "none" }}>
+        <Link href={calendarHref} className="brand" style={{ textDecoration: "none" }}>
           <Logo size={28} />
           <span className="brand-wordmark">vokalia</span>
         </Link>
@@ -40,14 +41,25 @@ export default function DashboardShell({
               Ajouter un rendez-vous
             </button>
           )}
-          {!isAdmin && (
-            <Link
-              href={profileHref}
-              className={`button ${isProfile ? "ghost" : ""}`}
-              style={!isProfile ? { borderColor: "var(--color-border)", background: "transparent", color: "var(--color-text)" } : {}}
-            >
-              Profil
-            </Link>
+          {showNavLinks && (
+            <>
+              <Link
+                href={calendarHref}
+                className={`button ${!isProfile ? "" : "ghost"}`}
+                style={!isProfile ? { borderColor: "var(--color-border)", background: "transparent", color: "var(--color-text)" } : {}}
+                aria-current={!isProfile ? "page" : undefined}
+              >
+                Calendrier
+              </Link>
+              <Link
+                href={profileHref}
+                className={`button ${isProfile ? "" : "ghost"}`}
+                style={isProfile ? { borderColor: "var(--color-border)", background: "transparent", color: "var(--color-text)" } : {}}
+                aria-current={isProfile ? "page" : undefined}
+              >
+                Profil
+              </Link>
+            </>
           )}
           {businessId && !isAdmin && (
             <a
@@ -71,13 +83,17 @@ export default function DashboardShell({
       <div className="content">{children}</div>
 
       {/* Mobile Navigation (Bottom Bar) */}
-      <nav className="mobile-nav md:hidden fixed bottom-0 left-0 right-0 border-t border-[var(--color-border)] bg-[var(--color-bg-panel)] flex justify-around items-center px-2 py-3 z-50">
-        {!isAdmin ? (
+      <nav 
+        className="mobile-nav md:hidden fixed bottom-0 left-0 right-0 border-t border-[var(--color-border)] bg-[var(--color-bg-panel)] flex justify-around items-center px-2 pt-3 z-50"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+      >
+        {showNavLinks ? (
           <>
             <Link
               href={calendarHref}
               className={`flex flex-col items-center gap-1 ${!isProfile ? "text-[var(--color-accent)]" : "text-[var(--color-text-dim)]"}`}
               style={{ textDecoration: "none" }}
+              aria-current={!isProfile ? "page" : undefined}
             >
               <span className="text-xl leading-none">📅</span>
               <span className="text-xs font-semibold">Calendrier</span>
@@ -95,6 +111,7 @@ export default function DashboardShell({
               href={profileHref}
               className={`flex flex-col items-center gap-1 ${isProfile ? "text-[var(--color-accent)]" : "text-[var(--color-text-dim)]"}`}
               style={{ textDecoration: "none" }}
+              aria-current={isProfile ? "page" : undefined}
             >
               <span className="text-xl leading-none">⚙️</span>
               <span className="text-xs font-semibold">Profil</span>
