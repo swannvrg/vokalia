@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import MobilePublicNav from "@/app/components/MobilePublicNav";
 import PublicFooter from "@/app/components/PublicFooter";
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function HomePage() {
           <Logo size={32} />
           <span className="vp-wordmark">vokalia</span>
         </a>
-        <nav aria-label="Navigation principale">
+        <nav aria-label="Navigation principale" className="hidden md:flex items-center gap-4">
           <a href="#comment-ca-marche" className="vp-nav-link">
             Comment ça marche
           </a>
@@ -37,6 +38,9 @@ export default function HomePage() {
             Demander une invitation
           </Link>
         </nav>
+        
+        {/* Menu Mobile */}
+        <MobilePublicNav />
       </header>
 
       <main id="main-content">

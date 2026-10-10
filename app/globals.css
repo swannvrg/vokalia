@@ -506,7 +506,12 @@ input[type="color"].input {
 }
 .timeline-head, .timeline-row {
   display: grid;
-  grid-template-columns: 5.5rem minmax(0, 1fr);
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+}
+@media (min-width: 768px) {
+  .timeline-head, .timeline-row {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
 }
 .timeline-head {
   padding: 0.7rem 1rem;
@@ -580,7 +585,7 @@ input[type="color"].input {
   z-index: 20;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px)) calc(1rem + env(safe-area-inset-bottom, 0px)) calc(1rem + env(safe-area-inset-left, 0px));
   background: rgba(10, 8, 6, 0.7);
 }
 .modal {
@@ -967,11 +972,7 @@ input[type="color"].input {
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(8px);
 }
-.vp-nav nav {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+
 .vp-brand {
   display: flex;
   align-items: center;
