@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatPhoneDisplay } from "@/lib/format-phone";
 
 type CallbackRequest = {
   id: string;
@@ -27,14 +28,7 @@ const formatParisDateTime = (iso: string) =>
  * +33612345678 → 06 12 34 56 78
  * Falls back to the raw number if it doesn't match known patterns.
  */
-export function formatPhoneDisplay(e164: string): string {
-  const fr = e164.match(/^\+33(\d{9})$/);
-  if (fr) {
-    const digits = `0${fr[1]}`;
-    return digits.replace(/(\d{2})(?=\d)/g, "$1 ");
-  }
-  return e164;
-}
+
 
 export default function CallbackPanel({
   businessId,
