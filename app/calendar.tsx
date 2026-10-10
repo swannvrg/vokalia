@@ -6,13 +6,16 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from "react";
 import type { CalendarData } from "@/lib/types";
 import Toast from "@/app/components/toast";
 import Logo from "@/app/components/Logo";
 import DashboardShell from "@/app/components/DashboardShell";
 import WaveIndicator from "@/app/components/WaveIndicator";
+import { useRouter } from "next/navigation";
 import CallbackPanel from "@/app/components/CallbackPanel";
+import { useModalFocusTrap } from "@/app/components/Modal";
 
 const parisDate = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(
@@ -180,7 +183,12 @@ export default function Calendar({
     const response = await fetch(`/api/appointments/${appointmentId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startTime, serviceId, resourceId }),
+      body: JSON.stringify({
+        startTime,
+        serviceId,
+        resourceId,
+        ...(businessId ? { businessId } : {}),
+      }),
     });
     const result = await response.json();
     if (!response.ok) setError(result.error);
@@ -191,7 +199,8 @@ export default function Calendar({
     }
   }
   async function cancelAppointment(appointmentId: string) {
-    const response = await fetch(`/api/appointments/${appointmentId}`, {
+    const qs = businessId ? `?businessId=${businessId}` : "";
+    const response = await fetch(`/api/appointments/${appointmentId}${qs}`, {
       method: "DELETE",
     });
     const result = await response.json();
@@ -295,7 +304,26 @@ export default function Calendar({
         </div>
         <CallbackPanel businessId={businessId} onError={setError} />
         {!loaded ? (
-          <div className="empty">Chargement du planning...</div>
+          <div className="flex flex-col gap-4 mt-4 animate-pulse">
+             <div className="h-10 bg-[var(--color-bg-panel)] rounded-xl w-1/3"></div>
+             <div className="h-24 bg-[var(--color-bg-panel)] rounded-xl w-full"></div>
+             <div className="h-24 bg-[var(--color-bg-panel)] rounded-xl w-full"></div>
+             <div className="h-24 bg-[var(--color-bg-panel)] rounded-xl w-full"></div>
+          </div>
+        ) : data?.resources.length === 0 || data?.services.length === 0 ? (
+          <div className="empty flex flex-col items-center justify-center text-center p-8 gap-4 border border-dashed border-[var(--color-border)] rounded-xl mt-4">
+            <span className="text-4xl">👋</span>
+            <h3 className="m-0 text-lg">Bienvenue sur votre planning</h3>
+            <p className="text-[var(--color-text-muted)] max-w-md m-0">
+              Pour commencer à recevoir des rendez-vous, ajoutez au moins un coiffeur et une prestation dans vos réglages.
+            </p>
+            <button 
+              className="button primary mt-2" 
+              onClick={() => router.push(businessId ? `/${businessId}/profil` : "/profil")}
+            >
+              Configurer mon salon
+            </button>
+          </div>
         ) : !data?.opening ? (
           <div className="empty">Le salon est fermé ce jour-là.</div>
         ) : (
@@ -413,6 +441,9 @@ function AddAppointmentModal({
   const [time, setTime] = useState(firstTimeFor(initialOpening));
   const [saving, setSaving] = useState(false);
   const timeOptions = timeOptionsFor(opening);
+  
+  const modalRef = useRef<HTMLFormElement>(null);
+  useModalFocusTrap(modalRef, onClose);
 
   useEffect(() => {
     if (date === initialDate) return;
@@ -464,6 +495,7 @@ function AddAppointmentModal({
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <form
+        ref={modalRef}
         className="modal"
         onSubmit={submit}
         role="dialog"
@@ -776,6 +808,10 @@ function AppointmentModal({
   const [saving, setSaving] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const timeOptions = timeOptionsFor(opening);
+  
+  const modalRef = useRef<HTMLElement>(null);
+  useModalFocusTrap(modalRef, onClose);
+
   const resource = resources.find(
     (item) => item.id === appointment.resource_id,
   );
@@ -806,6 +842,7 @@ function AppointmentModal({
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <section
+        ref={modalRef}
         className="modal"
         role="dialog"
         aria-modal="true"
