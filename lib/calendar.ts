@@ -63,19 +63,20 @@ export async function getCalendarData(
     resource: Array.isArray(item.resource) ? item.resource[0] ?? null : item.resource,
   })) as Appointment[];
   const slotResults = await Promise.all(
-    services.map(async (service) => {
-      const { data, error } = await supabase.rpc("get_available_slots", {
-        p_business_id: businessId,
-        p_service_id: service.id,
-        p_resource_id: "",
-        p_party_size: "1",
-        p_search_from: `${date}T00:00:00Z`,
-        p_search_days: 2,
-        p_slot_increment_minutes: 15,
-        p_max_results: 500,
-      });
-      if (error) throw error;
-      return (data ?? [])
+    services.flatMap((service) =>
+      resources.map(async (resource) => {
+        const { data, error } = await supabase.rpc("get_available_slots", {
+          p_business_id: businessId,
+          p_service_id: service.id,
+          p_resource_id: resource.id,
+          p_party_size: "1",
+          p_search_from: `${date}T00:00:00Z`,
+          p_search_days: 2,
+          p_slot_increment_minutes: 15,
+          p_max_results: 500,
+        });
+        if (error) throw error;
+        return (data ?? [])
         .map((slot: {
           resource_id: string;
           slot_start?: string;
@@ -114,7 +115,8 @@ export async function getCalendarData(
           };
         })
         .filter((slot: { slot_start: string }) => isParisDate(slot.slot_start, date));
-    }),
+      }),
+    ),
   );
 
   const slots = Array.from(
@@ -124,6 +126,8 @@ export async function getCalendarData(
         { resource_id: slot.resource_id, slot_start: slot.slot_start, slot_end: slot.slot_end },
       ]),
     ).values(),
+  ).sort((first, second) =>
+    new Date(first.slot_start).getTime() - new Date(second.slot_start).getTime(),
   );
 
   return {
