@@ -79,6 +79,15 @@ button { cursor: pointer; }
   letter-spacing: -0.01em;
   color: var(--color-text);
 }
+.dashboard-mobile-actions {
+  flex-shrink: 0;
+}
+.dashboard-mobile-menu {
+  top: 4.5rem;
+  right: 1rem;
+  width: min(18rem, calc(100vw - 2rem));
+  border-radius: 12px;
+}
 
 /* Legacy brand-mark (kept for non-logo pages, but hidden when Logo is used) */
 .brand-mark {
@@ -945,6 +954,27 @@ input[type="color"].input {
 @media (max-width: 650px) {
   .topbar {
     align-items: flex-start;
+  }
+  .dashboard-topbar {
+    min-height: 4rem;
+    padding: 0.65rem 1rem;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+  .dashboard-topbar .brand {
+    min-width: 0;
+    flex: 1;
+  }
+  .dashboard-topbar .brand-wordmark {
+    display: inline;
+    font-size: 1.15rem;
+  }
+  .dashboard-topbar > .actions {
+    display: none;
+  }
+  .dashboard-mobile-menu {
+    top: 4.5rem;
+    right: 0.75rem;
   }
   .content {
     width: min(100% - 1rem, 1400px);

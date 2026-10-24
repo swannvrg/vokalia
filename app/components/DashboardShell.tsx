@@ -48,14 +48,14 @@ export default function DashboardShell({
 
   return (
     <main className="shell">
-      <header className="topbar relative">
+      <header className="topbar relative dashboard-topbar">
         <Link href={calendarHref} className="brand" style={{ textDecoration: "none" }} onClick={() => setMenuOpen(false)}>
           <Logo size={28} />
           <span className="brand-wordmark">vokalia</span>
         </Link>
 
         {/* Mobile top actions: "+" button & burger button */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="dashboard-mobile-actions flex md:hidden items-center gap-2">
           {onAddAppointment && (
             <button
               type="button"
@@ -134,9 +134,9 @@ export default function DashboardShell({
 
       {/* Mobile Dropdown Menu */}
       {menuOpen && (
-        <div
+          <div
           id="mobile-dashboard-menu"
-          className="md:hidden fixed inset-x-0 top-[65px] bg-[var(--color-bg-panel)] border-b border-[var(--color-border)] shadow-2xl z-50 p-4 transition-all"
+          className="dashboard-mobile-menu md:hidden fixed bg-[var(--color-bg-panel)] border border-[var(--color-border)] shadow-2xl z-50 p-3 transition-all"
         >
           <nav className="flex flex-col gap-2">
             {showNavLinks ? (
