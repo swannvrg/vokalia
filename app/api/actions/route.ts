@@ -18,9 +18,13 @@ export async function POST(request: Request) {
         .eq("business_id", businessId)
         .maybeSingle();
       if (!appt) return Response.json({ error: "Rendez-vous introuvable." }, { status: 404 });
-      const { data, error } = await supabase.rpc("cancel_appointment", { p_appointment_id: body.appointmentId });
+      const { data, error } = await supabase.rpc("cancel_appointment", {
+        p_appointment_id: body.appointmentId,
+        p_business_id: businessId,
+      });
       if (error) throw error;
-      return Response.json({ ok: Boolean(data) });
+      if (!data) return Response.json({ error: "Ce rendez-vous est déjà annulé ou introuvable." }, { status: 409 });
+      return Response.json({ ok: true });
     }
 
     if (body.action === "block") {

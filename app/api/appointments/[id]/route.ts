@@ -107,9 +107,12 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const { id } = await context.params;
     const { data: appointment } = await supabase.from("appointments").select("id").eq("id", id).eq("business_id", businessId).maybeSingle();
     if (!appointment) return Response.json({ error: "Ce rendez-vous est introuvable." }, { status: 404 });
-    const { data, error } = await supabase.rpc("cancel_appointment", { p_appointment_id: id });
+    const { data, error } = await supabase.rpc("cancel_appointment", {
+      p_appointment_id: id,
+      p_business_id: businessId,
+    });
     if (error) throw error;
-    if (!data) return Response.json({ error: "Ce rendez-vous est déjà annulé ou introuvable." }, { status: 404 });
+    if (!data) return Response.json({ error: "Ce rendez-vous est déjà annulé ou introuvable." }, { status: 409 });
     return Response.json({ ok: true });
   } catch (error) {
     return handleApiError(error, "Impossible d'annuler le rendez-vous.");
