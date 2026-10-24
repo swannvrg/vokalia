@@ -128,6 +128,27 @@ function downloadCalendarFile(confirmation: Confirmation) {
       .toISOString()
       .replace(/[-:]/g, "")
       .replace(/\.\d{3}Z$/, "Z");
+
+  const title = `${confirmation.service.name} avec ${confirmation.slot.resource_name}`;
+  const location = [confirmation.salonName, confirmation.address]
+    .filter(Boolean)
+    .join(", ");
+
+  const isAndroid = /android/i.test(navigator.userAgent);
+
+  // ANDROID : ouvre Google Agenda avec l'événement pré-rempli
+  if (isAndroid) {
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: title,
+      dates: `${toIcsDate(start)}/${toIcsDate(end)}`,
+      location,
+    });
+    window.location.href = `https://calendar.google.com/calendar/render?${params}`;
+    return;
+  }
+
+  // IPHONE (et le reste) : ouvre l'écran "Ajouter l'événement" du Calendrier
   const content = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -137,19 +158,13 @@ function downloadCalendarFile(confirmation: Confirmation) {
     `DTSTAMP:${toIcsDate(new Date())}`,
     `DTSTART:${toIcsDate(start)}`,
     `DTEND:${toIcsDate(end)}`,
-    `SUMMARY:${icsEscape(`${confirmation.service.name} avec ${confirmation.slot.resource_name}`)}`,
-    `LOCATION:${icsEscape([confirmation.salonName, confirmation.address].filter(Boolean).join(", "))}`,
+    `SUMMARY:${icsEscape(title)}`,
+    `LOCATION:${icsEscape(location)}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ].join("\r\n");
-  const url = URL.createObjectURL(
-    new Blob([content], { type: "text/calendar;charset=utf-8" }),
-  );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "rendez-vous-vokalia.ics";
-  link.click();
-  URL.revokeObjectURL(url);
+
+  window.location.href = `data:text/calendar;charset=utf-8,${encodeURIComponent(content)}`;
 }
 
 function CheckIcon({ size = 14 }: { size?: number }) {
