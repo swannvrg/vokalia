@@ -817,14 +817,6 @@ function CompactCalendar({
       (selectedResource === "all" || item.resource_id === selectedResource),
   );
 
-  const availableSlots = useMemo(() => {
-    const set = new Set<string>();
-    for (const slot of data.slots) {
-      set.add(`${slot.resource_id}|${formatTime(slot.slot_start)}`);
-    }
-    return set;
-  }, [data.slots]);
-
   const isMultiColumn = selectedResource === "all" && resources.length > 1;
 
   return (
@@ -889,10 +881,14 @@ function CompactCalendar({
                     </div>
 
                     {resources.map((res) => {
-                      const resAppts = appointments.filter(
-                        (item) => item.resource_id === res.id && formatTime(item.start_time) === time,
-                      );
-                      const isFree = resAppts.length === 0 && availableSlots.has(`${res.id}|${time}`);
+                      const slotStart = new Date(start).getTime();
+                      const slotEnd = slotStart + 15 * 60_000;
+                      const resAppts = appointments.filter((item) => {
+                        const appointmentStart = new Date(item.start_time).getTime();
+                        const appointmentEnd = new Date(item.end_time).getTime();
+                        return item.resource_id === res.id && appointmentStart < slotEnd && appointmentEnd > slotStart;
+                      });
+                      const isFree = resAppts.length === 0;
 
                       return (
                         <div
@@ -1033,14 +1029,15 @@ function CompactCalendar({
             <span>Rendez-vous et disponibilités</span>
           </div>
           {times.map((time) => {
-            const rowAppointments = appointments.filter(
-              (item) => formatTime(item.start_time) === time,
-            );
             const start = parisToISO(data.date, time);
-            const canBlock =
-              selectedResource !== "all" &&
-              availableSlots.has(`${selectedResource}|${time}`) &&
-              rowAppointments.length === 0;
+            const slotStart = new Date(start).getTime();
+            const slotEnd = slotStart + 15 * 60_000;
+            const rowAppointments = appointments.filter((item) => {
+              const appointmentStart = new Date(item.start_time).getTime();
+              const appointmentEnd = new Date(item.end_time).getTime();
+              return item.resource_id === selectedResource && appointmentStart < slotEnd && appointmentEnd > slotStart;
+            });
+            const canBlock = selectedResource !== "all" && rowAppointments.length === 0;
             const isTarget = time === targetTime;
 
             return (
