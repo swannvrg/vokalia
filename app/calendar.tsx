@@ -111,6 +111,10 @@ export default function Calendar({
     string | null
   >(null);
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
+  const [appointmentDraft, setAppointmentDraft] = useState<{
+    resourceId: string;
+    start: string;
+  } | null>(null);
   const blockTriggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -361,7 +365,6 @@ export default function Calendar({
           </div>
         </div>
 
-        <CallbackPanel businessId={businessId} onError={setError} />
         {!loaded ? (
           <div className="flex flex-col gap-4 mt-4 animate-pulse">
              <div className="h-10 bg-[var(--color-bg-panel)] rounded-xl w-1/3"></div>
@@ -399,6 +402,7 @@ export default function Calendar({
             onOccupied={setSelectedAppointmentId}
           />
         )}
+        <CallbackPanel businessId={businessId} onError={setError} />
         {block && data && (
           <BlockAppointmentModal
             block={block}
@@ -409,6 +413,11 @@ export default function Calendar({
             onLabelChange={setLabel}
             onSave={saveBlock}
             onClose={() => setBlock(null)}
+            onBook={() => {
+              setAppointmentDraft(block);
+              setBlock(null);
+              setAddAppointmentOpen(true);
+            }}
           />
         )}
         {selectedAppointment && data && (
@@ -426,10 +435,15 @@ export default function Calendar({
           <AddAppointmentModal
             businessId={businessId}
             date={date}
+            initialResourceId={appointmentDraft?.resourceId}
+            initialTime={appointmentDraft ? formatTime(appointmentDraft.start) : undefined}
             opening={data.opening}
             resources={data.resources}
             services={data.services}
-            onClose={() => setAddAppointmentOpen(false)}
+            onClose={() => {
+              setAddAppointmentOpen(false);
+              setAppointmentDraft(null);
+            }}
             onCreated={async () => {
               await load();
               setNotice("Rendez-vous créé.");
@@ -444,6 +458,8 @@ export default function Calendar({
 function AddAppointmentModal({
   businessId,
   date: initialDate,
+  initialResourceId,
+  initialTime,
   opening: initialOpening,
   resources,
   services,
@@ -453,6 +469,8 @@ function AddAppointmentModal({
 }: {
   businessId?: string;
   date: string;
+  initialResourceId?: string;
+  initialTime?: string;
   opening: CalendarData["opening"];
   resources: CalendarData["resources"];
   services: CalendarData["services"];
@@ -464,9 +482,9 @@ function AddAppointmentModal({
   const [opening, setOpening] = useState(initialOpening);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [resourceId, setResourceId] = useState(resources[0]?.id || "");
+  const [resourceId, setResourceId] = useState(initialResourceId || resources[0]?.id || "");
   const [serviceId, setServiceId] = useState(services[0]?.id || "");
-  const [time, setTime] = useState(firstTimeFor(initialOpening));
+  const [time, setTime] = useState(initialTime || firstTimeFor(initialOpening));
   const [saving, setSaving] = useState(false);
   const timeOptions = timeOptionsFor(opening);
   
@@ -700,6 +718,7 @@ function BlockAppointmentModal({
   onLabelChange,
   onSave,
   onClose,
+  onBook,
 }: {
   block: { resourceId: string; start: string };
   resourceName: string;
@@ -709,6 +728,7 @@ function BlockAppointmentModal({
   onLabelChange: (value: string) => void;
   onSave: () => Promise<void>;
   onClose: () => void;
+  onBook: () => void;
 }) {
   const modalRef = useRef<HTMLElement>(null);
   useModalFocusTrap(modalRef, onClose);
@@ -768,6 +788,9 @@ function BlockAppointmentModal({
             />
           </div>
           <div className="modal-actions">
+            <button type="button" className="button ghost" onClick={onBook}>
+              Prendre un rendez-vous
+            </button>
             <span />
             <button type="button" className="button" onClick={onClose}>
               Annuler
@@ -883,12 +906,15 @@ function CompactCalendar({
                     {resources.map((res) => {
                       const slotStart = new Date(start).getTime();
                       const slotEnd = slotStart + 15 * 60_000;
-                      const resAppts = appointments.filter((item) => {
+                      const displayedAppointments = appointments.filter(
+                        (item) => item.resource_id === res.id && formatTime(item.start_time) === time,
+                      );
+                      const occupiedAppointments = appointments.filter((item) => {
                         const appointmentStart = new Date(item.start_time).getTime();
                         const appointmentEnd = new Date(item.end_time).getTime();
                         return item.resource_id === res.id && appointmentStart < slotEnd && appointmentEnd > slotStart;
                       });
-                      const isFree = resAppts.length === 0;
+                      const isFree = occupiedAppointments.length === 0;
 
                       return (
                         <div
@@ -908,7 +934,7 @@ function CompactCalendar({
                           aria-label={isFree ? `Bloquer ${res.name} à ${time}` : undefined}
                         >
                           <div className="timeline-appointment-layer">
-                          {resAppts.map((appt) => {
+                          {displayedAppointments.map((appt) => {
                             const durationMin =
                               Math.round(
                                 (new Date(appt.end_time).getTime() - new Date(appt.start_time).getTime()) /
@@ -1032,12 +1058,15 @@ function CompactCalendar({
             const start = parisToISO(data.date, time);
             const slotStart = new Date(start).getTime();
             const slotEnd = slotStart + 15 * 60_000;
-            const rowAppointments = appointments.filter((item) => {
+            const displayedAppointments = appointments.filter(
+              (item) => item.resource_id === selectedResource && formatTime(item.start_time) === time,
+            );
+            const occupiedAppointments = appointments.filter((item) => {
               const appointmentStart = new Date(item.start_time).getTime();
               const appointmentEnd = new Date(item.end_time).getTime();
               return item.resource_id === selectedResource && appointmentStart < slotEnd && appointmentEnd > slotStart;
             });
-            const canBlock = selectedResource !== "all" && rowAppointments.length === 0;
+            const canBlock = selectedResource !== "all" && occupiedAppointments.length === 0;
             const isTarget = time === targetTime;
 
             return (
@@ -1059,7 +1088,7 @@ function CompactCalendar({
               >
                 <time>{time}</time>
                 <div className="timeline-events justify-between">
-                  {rowAppointments.map((appointment) => {
+                  {displayedAppointments.map((appointment) => {
                     const resource = resources.find(
                       (item) => item.id === appointment.resource_id,
                     );
@@ -1096,7 +1125,7 @@ function CompactCalendar({
                       </button>
                     );
                   })}
-                  {rowAppointments.length === 0 && canBlock && (
+                  {displayedAppointments.length === 0 && canBlock && (
                     <span className="opacity-0 group-hover:opacity-100 text-[var(--color-accent)] text-xs font-semibold px-2 transition-opacity">
                       + Bloquer ce créneau
                     </span>

@@ -457,6 +457,12 @@ input[type="color"].input {
   background: color-mix(in srgb, var(--slot-color) 25%, var(--color-bg-panel-2));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--slot-color) 30%, transparent);
 }
+.slot-choice.selected {
+  color: var(--color-text);
+  font-weight: 700;
+  outline: 2px solid var(--slot-color);
+  outline-offset: 1px;
+}
 .booking-submit {
   width: 100%;
   margin-top: 1.5rem;

@@ -179,7 +179,6 @@ export default function DashboardShell({
                       <Icon name="external" size={20} />
                       <span>Fiche publique</span>
                     </span>
-                    <span className="text-xs text-[var(--color-text-muted)]">Nouvel onglet ↗</span>
                   </a>
                 )}
               </>

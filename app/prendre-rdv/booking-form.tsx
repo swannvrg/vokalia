@@ -46,17 +46,23 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   }, [businessId, date, serviceId, resourceId]);
 
   const groupedSlots = useMemo(() => {
-    const groups = new Map<string, Slot[]>();
+    const groups = new Map<string, Map<string, Slot>>();
     for (const slot of data?.slots ?? []) {
       if (!slot.slot_start) continue;
-      groups.set(slot.slot_start, [...(groups.get(slot.slot_start) ?? []), slot]);
+      const slotsAtTime = groups.get(slot.slot_start) ?? new Map<string, Slot>();
+      slotsAtTime.set(slot.resource_id, slot);
+      groups.set(slot.slot_start, slotsAtTime);
     }
-    return [...groups.values()];
+    return [...groups.values()].map((slots) => [...slots.values()]);
   }, [data]);
+
+  const canSubmit = Boolean(serviceId && selectedSlot && name.trim() && phone.trim()) && !booking;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!selectedSlot) return setError("Sélectionnez un créneau.");
+    if (!serviceId || !selectedSlot || !name.trim() || !phone.trim()) {
+      return setError("Renseignez votre nom, votre téléphone, une prestation et un créneau.");
+    }
     setBooking(true); setError("");
     const response = await fetch("/api/public/booking", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ businessId, customerName: name, customerPhone: phone, resourceId: selectedSlot.resource_id, serviceId, startTime: selectedSlot.slot_start }) });
     const result = await response.json();
