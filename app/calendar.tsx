@@ -909,6 +909,7 @@ function CompactCalendar({
                               onFree(res.id, start, event.currentTarget);
                             }
                           }}
+                          aria-label={isFree ? `Bloquer ${res.name} à ${time}` : undefined}
                         >
                           <div className="timeline-appointment-layer">
                           {resAppts.map((appt) => {
