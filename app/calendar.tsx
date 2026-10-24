@@ -294,6 +294,8 @@ export default function Calendar({
           />
         )}
 
+        <CallbackPanel businessId={businessId} onError={setError} compact />
+
         {/* Sticky Header: Navigation date, Résumé 1 ligne & Filtre praticien */}
         <div className="sticky top-0 z-20 bg-[var(--color-bg)]/95 backdrop-blur-md pt-2 pb-3 mb-4 border-b border-[var(--color-border)]">
           <div className="toolbar !m-0 !p-0">
@@ -402,7 +404,6 @@ export default function Calendar({
             onOccupied={setSelectedAppointmentId}
           />
         )}
-        <CallbackPanel businessId={businessId} onError={setError} />
         {block && data && (
           <BlockAppointmentModal
             block={block}

@@ -34,14 +34,16 @@ const formatParisDateTime = (iso: string) =>
 export default function CallbackPanel({
   businessId,
   onError,
+  compact = false,
 }: {
   businessId?: string;
   onError: (message: string) => void;
+  compact?: boolean;
 }) {
   const [callbacks, setCallbacks] = useState<CallbackRequest[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState<"new" | "done">("new");
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -117,7 +119,7 @@ export default function CallbackPanel({
   if (!loaded) return null;
 
   return (
-    <section className="callback-panel">
+    <section className={`callback-panel ${compact ? "callback-panel-floating" : ""}`}>
       <button
         className="callback-panel-header"
         onClick={() => setExpanded((v) => !v)}
@@ -126,7 +128,7 @@ export default function CallbackPanel({
       >
         <div className="callback-panel-title">
           <span className="callback-panel-icon"><Icon name="phone" size={16} /></span>
-          <span>Rappels</span>
+          <span className={compact ? "sr-only" : undefined}>Rappels</span>
           {newItems.length > 0 && (
             <span className="callback-badge">{newItems.length}</span>
           )}

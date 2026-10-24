@@ -88,6 +88,14 @@ button { cursor: pointer; }
   width: min(18rem, calc(100vw - 2rem));
   border-radius: 12px;
 }
+@media (max-width: 915px) {
+  .dashboard-topbar > .actions {
+    display: none !important;
+  }
+  .dashboard-mobile-actions {
+    display: flex !important;
+  }
+}
 
 /* Legacy brand-mark (kept for non-logo pages, but hidden when Logo is used) */
 .brand-mark {
@@ -781,6 +789,36 @@ input[type="color"].input {
   border-radius: 14px;
   background: var(--color-bg-panel);
   overflow: hidden;
+}
+.callback-panel-floating {
+  position: relative;
+  z-index: 25;
+  margin: 0 0 0.5rem;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.callback-panel-floating .callback-panel-header {
+  width: auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+.callback-panel-floating .callback-panel-title {
+  gap: 0.35rem;
+}
+.callback-panel-floating .callback-panel-body {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  width: min(560px, calc(100vw - 2rem));
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-panel);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
 }
 .callback-panel-header {
   display: flex;
