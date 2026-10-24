@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/app/components/Logo";
@@ -18,11 +19,27 @@ export default function DashboardShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
   };
+
+  // Close menu on Escape key
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
+
+  // Close menu on navigation change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const isProfile = pathname?.includes("/profil");
   const calendarHref = businessId ? `/${businessId}/calendrier` : (isAdmin ? "/admin" : "/calendrier");
@@ -30,12 +47,38 @@ export default function DashboardShell({
   const showNavLinks = !isAdmin || businessId;
 
   return (
-    <main className="shell pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
-      <header className="topbar">
-        <Link href={calendarHref} className="brand" style={{ textDecoration: "none" }}>
+    <main className="shell">
+      <header className="topbar relative">
+        <Link href={calendarHref} className="brand" style={{ textDecoration: "none" }} onClick={() => setMenuOpen(false)}>
           <Logo size={28} />
           <span className="brand-wordmark">vokalia</span>
         </Link>
+
+        {/* Mobile top actions: "+" button & burger button */}
+        <div className="flex md:hidden items-center gap-2">
+          {onAddAppointment && (
+            <button
+              type="button"
+              className="button primary flex items-center justify-center min-w-[44px] min-h-[44px] !p-0 !w-11 !h-11 rounded-full shadow-md"
+              onClick={onAddAppointment}
+              aria-label="Ajouter un rendez-vous"
+            >
+              <Icon name="plus" size={20} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-panel)] text-[var(--color-text)] hover:border-[var(--color-accent)] transition-colors"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-dashboard-menu"
+            aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          >
+            <Icon name={menuOpen ? "close" : "menu"} size={22} />
+          </button>
+        </div>
+
+        {/* Desktop actions (>= 768px) */}
         <div className="actions hidden md:flex">
           {onAddAppointment && (
             <button className="button primary" onClick={onAddAppointment}>
@@ -80,51 +123,87 @@ export default function DashboardShell({
         </div>
       </header>
 
+      {/* Backdrop overlay for mobile menu */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 top-[65px] bg-black/50 z-40 md:hidden backdrop-blur-xs"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile Dropdown Menu */}
+      {menuOpen && (
+        <div
+          id="mobile-dashboard-menu"
+          className="md:hidden fixed inset-x-0 top-[65px] bg-[var(--color-bg-panel)] border-b border-[var(--color-border)] shadow-2xl z-50 p-4 transition-all"
+        >
+          <nav className="flex flex-col gap-2">
+            {showNavLinks ? (
+              <>
+                <Link
+                  href={calendarHref}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium min-h-[44px] transition-colors ${
+                    !isProfile
+                      ? "bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] text-[var(--color-accent)] border border-[var(--color-accent)]"
+                      : "text-[var(--color-text-dim)] hover:bg-[var(--color-bg-subtle)]"
+                  }`}
+                  aria-current={!isProfile ? "page" : undefined}
+                >
+                  <Icon name="calendar" size={20} />
+                  <span>Calendrier</span>
+                </Link>
+                <Link
+                  href={profileHref}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium min-h-[44px] transition-colors ${
+                    isProfile
+                      ? "bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] text-[var(--color-accent)] border border-[var(--color-accent)]"
+                      : "text-[var(--color-text-dim)] hover:bg-[var(--color-bg-subtle)]"
+                  }`}
+                  aria-current={isProfile ? "page" : undefined}
+                >
+                  <Icon name="settings" size={20} />
+                  <span>Profil</span>
+                </Link>
+                {businessId && (
+                  <a
+                    href={`/${businessId}/profil-public`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-between px-4 py-3 rounded-lg text-base font-medium min-h-[44px] text-[var(--color-text-dim)] hover:bg-[var(--color-bg-subtle)] transition-colors"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Icon name="external" size={20} />
+                      <span>Fiche publique</span>
+                    </span>
+                    <span className="text-xs text-[var(--color-text-muted)]">Nouvel onglet ↗</span>
+                  </a>
+                )}
+              </>
+            ) : (
+              <div className="px-4 py-2 text-sm text-[var(--color-text-muted)]">Administration</div>
+            )}
+            <div className="my-1 border-t border-[var(--color-border)]" />
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                handleLogout();
+              }}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium min-h-[44px] text-red-400 hover:bg-red-500/10 transition-colors w-full text-left"
+            >
+              <Icon name="logout" size={20} />
+              <span>Se déconnecter</span>
+            </button>
+          </nav>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="content">{children}</div>
-
-      {/* Mobile Navigation (Bottom Bar) */}
-      <nav 
-        className="mobile-nav md:hidden fixed bottom-0 left-0 right-0 border-t border-[var(--color-border)] bg-[var(--color-bg-panel)] flex justify-around items-center px-2 pt-3 z-50"
-        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
-      >
-        {showNavLinks ? (
-          <>
-            <Link
-              href={calendarHref}
-              className={`flex flex-col items-center gap-1 ${!isProfile ? "text-[var(--color-accent)]" : "text-[var(--color-text-dim)]"}`}
-              style={{ textDecoration: "none" }}
-              aria-current={!isProfile ? "page" : undefined}
-            >
-              <Icon name="calendar" size={20} />
-              <span className="text-xs font-semibold">Calendrier</span>
-            </Link>
-            {onAddAppointment && (
-              <button
-                className="bg-[var(--color-accent)] text-[var(--color-bg)] rounded-full w-12 h-12 flex items-center justify-center font-bold text-2xl -mt-6 shadow-lg shadow-black/50"
-                onClick={onAddAppointment}
-                aria-label="Ajouter un rendez-vous"
-              >
-                +
-              </button>
-            )}
-            <Link
-              href={profileHref}
-              className={`flex flex-col items-center gap-1 ${isProfile ? "text-[var(--color-accent)]" : "text-[var(--color-text-dim)]"}`}
-              style={{ textDecoration: "none" }}
-              aria-current={isProfile ? "page" : undefined}
-            >
-              <Icon name="settings" size={20} />
-              <span className="text-xs font-semibold">Profil</span>
-            </Link>
-          </>
-        ) : (
-          <div className="flex justify-around w-full">
-            <span className="text-[var(--color-text-muted)] text-sm">Administration</span>
-            <button className="text-[var(--color-text-dim)] text-sm font-semibold" onClick={handleLogout}>Déconnexion</button>
-          </div>
-        )}
-      </nav>
     </main>
   );
 }
