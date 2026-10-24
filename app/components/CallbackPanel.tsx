@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatPhoneDisplay } from "@/lib/format-phone";
+import Icon from "@/app/components/Icon";
 
 type CallbackRequest = {
   id: string;
@@ -124,7 +125,7 @@ export default function CallbackPanel({
         aria-expanded={expanded}
       >
         <div className="callback-panel-title">
-          <span className="callback-panel-icon">📞</span>
+          <span className="callback-panel-icon"><Icon name="phone" size={16} /></span>
           <span>Rappels</span>
           {newItems.length > 0 && (
             <span className="callback-badge">{newItems.length}</span>
@@ -200,7 +201,7 @@ export default function CallbackPanel({
                     {updating === item.id
                       ? "..."
                       : tab === "new"
-                        ? "✓ Appelé"
+                        ? <span className="inline-flex items-center gap-1"><Icon name="check" size={13} /> Appelé</span>
                         : "↩ Remettre"}
                   </button>
                 </li>

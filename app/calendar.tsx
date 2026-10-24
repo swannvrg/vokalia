@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { CalendarData } from "@/lib/types";
 import Toast from "@/app/components/toast";
-import Logo from "@/app/components/Logo";
+import Icon from "@/app/components/Icon";
 import DashboardShell from "@/app/components/DashboardShell";
 import WaveIndicator from "@/app/components/WaveIndicator";
 import { useRouter } from "next/navigation";
@@ -316,7 +316,7 @@ export default function Calendar({
           </div>
         ) : data?.resources.length === 0 || data?.services.length === 0 ? (
           <div className="empty flex flex-col items-center justify-center text-center p-8 gap-4 border border-dashed border-[var(--color-border)] rounded-xl mt-4">
-            <span className="text-4xl">👋</span>
+            <span className="text-[var(--color-accent)]"><Icon name="sparkles" size={36} /></span>
             <h3 className="m-0 text-lg">Bienvenue sur votre planning</h3>
             <p className="text-[var(--color-text-muted)] max-w-md m-0">
               Pour commencer à recevoir des rendez-vous, ajoutez au moins un coiffeur et une prestation dans vos réglages.

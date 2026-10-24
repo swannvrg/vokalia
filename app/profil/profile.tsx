@@ -4,6 +4,7 @@ import { startTransition, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Toast from "@/app/components/toast";
 import DashboardShell from "@/app/components/DashboardShell";
+import Icon from "@/app/components/Icon";
 
 type Business = {
   id: string;
@@ -588,9 +589,11 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                           color: hasDefaultIssue
                             ? "var(--color-danger)"
                             : "var(--color-accent-soft)",
+                          display: "inline-flex",
+                          alignItems: "center",
                         }}
                       >
-                        ★
+                        <Icon name="star" size={16} />
                       </span>
                       <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>
                         Prestation par défaut du salon (Agent vocal)
@@ -624,7 +627,7 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                         gap: "0.4rem",
                       }}
                     >
-                      <span>⚠️</span>
+                      <Icon name="warning" size={16} />
                       <span>
                         Aucune prestation par défaut n&apos;est actuellement active. Veuillez choisir un nouveau défaut parmi les prestations actives ci-dessous pour assurer le bon fonctionnement de l&apos;agent vocal.
                       </span>
@@ -846,7 +849,10 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                             }}
                             title="Cette prestation est actuellement définie comme le choix par défaut du salon"
                           >
-                            ★ Par défaut
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                              <Icon name="star" size={12} />
+                              Par défaut
+                            </span>
                           </span>
                         )}
 
@@ -908,7 +914,7 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                             paddingLeft: "0.2rem",
                           }}
                         >
-                          <span>★</span>
+                          <Icon name="star" size={14} style={{ flexShrink: 0 }} />
                           <span>
                             Prestation principale du salon : sélectionnée d&apos;office par l&apos;agent vocal si le client ne précise pas de prestation.
                           </span>
@@ -966,7 +972,7 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                               <option value="">-- Aucun complément (prestation simple) --</option>
                               {isComboInactive && (
                                 <option value={service.combo_service_id!} disabled>
-                                  ⚠️ {targetCombo ? targetCombo.name : "Prestation supprimée"} (désactivée)
+                                  [Inactif] {targetCombo ? targetCombo.name : "Prestation supprimée"} (désactivée)
                                 </option>
                               )}
                               {services
@@ -995,7 +1001,7 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                                 gap: "0.35rem",
                               }}
                             >
-                              <span>⚠️</span>
+                              <Icon name="warning" size={15} style={{ flexShrink: 0 }} />
                               <span>
                                 Le complément précédemment associé ({targetCombo ? `« ${targetCombo.name} »` : "inconnu"}) est désactivé. Veuillez sélectionner une prestation active ou remettre sur « Aucun complément ».
                               </span>
@@ -1011,7 +1017,10 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                               lineHeight: 1.4,
                             }}
                           >
-                            💡 {currentDefaultService ? (
+                            <span className="inline-flex items-center gap-1 mr-1">
+                              <Icon name="info" size={13} style={{ color: "var(--color-accent-soft)" }} />
+                            </span>
+                            {currentDefaultService ? (
                               <>
                                 Si le client demande cette prestation en plus de{" "}
                                 <strong style={{ color: "var(--color-text)" }}>

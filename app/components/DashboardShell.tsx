@@ -3,6 +3,7 @@
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/app/components/Logo";
+import Icon from "@/app/components/Icon";
 
 export default function DashboardShell({
   children,
@@ -95,7 +96,7 @@ export default function DashboardShell({
               style={{ textDecoration: "none" }}
               aria-current={!isProfile ? "page" : undefined}
             >
-              <span className="text-xl leading-none">📅</span>
+              <Icon name="calendar" size={20} />
               <span className="text-xs font-semibold">Calendrier</span>
             </Link>
             {onAddAppointment && (
@@ -113,7 +114,7 @@ export default function DashboardShell({
               style={{ textDecoration: "none" }}
               aria-current={isProfile ? "page" : undefined}
             >
-              <span className="text-xl leading-none">⚙️</span>
+              <Icon name="settings" size={20} />
               <span className="text-xs font-semibold">Profil</span>
             </Link>
           </>

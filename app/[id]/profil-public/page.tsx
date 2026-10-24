@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createSupabaseAdminClient } from "@/lib/supabase";
 import Logo from "@/app/components/Logo";
 import PublicFooter from "@/app/components/PublicFooter";
+import Icon from "@/app/components/Icon";
 import { formatPhoneDisplay } from "@/lib/format-phone";
 
 const UUID_REGEX =
@@ -169,7 +170,7 @@ export default async function PublicSalonProfilePage({
           >
             {business.address && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
-                <span>📍</span>
+                <Icon name="pin" size={16} />
                 <span>{business.address}</span>
               </span>
             )}
@@ -184,7 +185,7 @@ export default async function PublicSalonProfilePage({
                   textDecoration: "none",
                 }}
               >
-                <span>📞</span>
+                <Icon name="phone" size={16} />
                 <span>{formatPhoneDisplay(business.real_phone_number)}</span>
               </a>
             )}
@@ -289,7 +290,10 @@ export default async function PublicSalonProfilePage({
                               borderRadius: "4px",
                             }}
                           >
-                            ★ Populaire
+                            <span className="inline-flex items-center gap-1">
+                              <Icon name="star" size={12} />
+                              Populaire
+                            </span>
                           </span>
                         )}
                       </div>
