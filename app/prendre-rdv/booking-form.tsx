@@ -54,7 +54,9 @@ export default function BookingForm({ businessId }: { businessId: string }) {
       slotsAtTime.set(slot.resource_id, slot);
       groups.set(displayedTime, slotsAtTime);
     }
-    return [...groups.values()].map((slots) => [...slots.values()]);
+    return [...groups.entries()]
+      .sort(([firstTime], [secondTime]) => firstTime.localeCompare(secondTime))
+      .map(([, slots]) => [...slots.values()]);
   }, [data]);
 
   const canSubmit = Boolean(serviceId && selectedSlot && name.trim() && phone.trim()) && !booking;

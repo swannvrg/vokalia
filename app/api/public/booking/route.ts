@@ -40,17 +40,22 @@ export async function GET(request: Request) {
 
     let slots: { resource_id: string; resource_name: string; slot_start: string; slot_end: string }[] = [];
     if (serviceId) {
-      const { data, error } = await supabase.rpc("get_available_slots", {
-        p_business_id: business.id,
-        p_service_id: serviceId,
-        p_resource_id: resourceId,
-        p_party_size: "1",
-        p_search_from: `${date}T00:00:00${parisOffset(date, "00:00")}`,
-        p_search_days: 1,
-        p_slot_increment_minutes: 15,
-        p_max_results: 300,
-      });
-      if (error) throw error;
+      const resourceIds = resourceId ? [resourceId] : (resources ?? []).map((resource) => resource.id);
+      const responses = await Promise.all(resourceIds.map((currentResourceId) =>
+        supabase.rpc("get_available_slots", {
+          p_business_id: business.id,
+          p_service_id: serviceId,
+          p_resource_id: currentResourceId,
+          p_party_size: "1",
+          p_search_from: `${date}T00:00:00${parisOffset(date, "00:00")}`,
+          p_search_days: 1,
+          p_slot_increment_minutes: 15,
+          p_max_results: 300,
+        }),
+      ));
+      const firstError = responses.find((response) => response.error)?.error;
+      if (firstError) throw firstError;
+      const data = responses.flatMap((response) => response.data ?? []);
 
       const service = (services ?? []).find((s) => s.id === serviceId);
       const duration = service?.duration_minutes ?? 30;
