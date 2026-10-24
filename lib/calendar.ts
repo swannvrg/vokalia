@@ -75,7 +75,45 @@ export async function getCalendarData(
         p_max_results: 500,
       });
       if (error) throw error;
-      return (data ?? []).filter((slot: { slot_start: string }) => isParisDate(slot.slot_start, date));
+      return (data ?? [])
+        .map((slot: {
+          resource_id: string;
+          slot_start?: string;
+          slot_end?: string;
+          slot_display?: string;
+          slot_token?: string;
+        }) => {
+          let slotStart = slot.slot_start;
+          if (!slotStart && slot.slot_token) {
+            try {
+              const decoded = Buffer.from(slot.slot_token, "base64").toString("utf-8");
+              const parts = decoded.split("|");
+              if (parts[1]) {
+                const d = new Date(parts[1].trim());
+                if (!Number.isNaN(d.getTime())) slotStart = d.toISOString();
+              }
+            } catch {
+              // ignore
+            }
+          }
+          if (!slotStart && slot.slot_display) {
+            const d = new Date(slot.slot_display);
+            if (!Number.isNaN(d.getTime())) slotStart = d.toISOString();
+          }
+          const slotEnd =
+            slot.slot_end ||
+            (slotStart
+              ? new Date(
+                  new Date(slotStart).getTime() + (service.duration_minutes || 30) * 60_000,
+                ).toISOString()
+              : "");
+          return {
+            resource_id: slot.resource_id,
+            slot_start: slotStart ?? "",
+            slot_end: slotEnd,
+          };
+        })
+        .filter((slot: { slot_start: string }) => isParisDate(slot.slot_start, date));
     }),
   );
 

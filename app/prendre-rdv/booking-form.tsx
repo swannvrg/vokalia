@@ -9,7 +9,16 @@ type Slot = { resource_id: string; resource_name: string; slot_start: string; sl
 type BookingData = { business: { name: string; address: string | null; real_phone_number: string | null }; services: Service[]; resources: Resource[]; slots: Slot[] };
 
 const parisDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
-const formatTime = (value: string) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+const formatTime = (value: string) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+};
 
 export default function BookingForm({ businessId }: { businessId: string }) {
   const [date, setDate] = useState(parisDate);
@@ -38,7 +47,10 @@ export default function BookingForm({ businessId }: { businessId: string }) {
 
   const groupedSlots = useMemo(() => {
     const groups = new Map<string, Slot[]>();
-    for (const slot of data?.slots ?? []) groups.set(slot.slot_start, [...(groups.get(slot.slot_start) ?? []), slot]);
+    for (const slot of data?.slots ?? []) {
+      if (!slot.slot_start) continue;
+      groups.set(slot.slot_start, [...(groups.get(slot.slot_start) ?? []), slot]);
+    }
     return [...groups.values()];
   }, [data]);
 

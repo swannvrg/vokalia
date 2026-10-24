@@ -53,12 +53,16 @@ const displayDate = (date: string) =>
     month: "long",
     year: "numeric",
   }).format(new Date(`${date}T12:00:00Z`));
-const formatTime = (value: string) =>
-  new Intl.DateTimeFormat("fr-FR", {
+const formatTime = (value: string) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(d);
+};
 const shiftDate = (date: string, amount: number) => {
   const next = new Date(`${date}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + amount);

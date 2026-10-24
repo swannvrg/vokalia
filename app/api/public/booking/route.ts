@@ -51,7 +51,55 @@ export async function GET(request: Request) {
         p_max_results: 300,
       });
       if (error) throw error;
-      slots = data ?? [];
+
+      const service = (services ?? []).find((s) => s.id === serviceId);
+      const duration = service?.duration_minutes ?? 30;
+
+      slots = (data ?? []).map((slot: {
+        resource_id: string;
+        resource_name: string;
+        slot_start?: string;
+        slot_end?: string;
+        slot_display?: string;
+        slot_token?: string;
+      }) => {
+        let slotStart = slot.slot_start;
+        if (!slotStart && slot.slot_token) {
+          try {
+            const decoded = Buffer.from(slot.slot_token, "base64").toString("utf-8");
+            const parts = decoded.split("|");
+            if (parts[1]) {
+              const d = new Date(parts[1].trim());
+              if (!Number.isNaN(d.getTime())) slotStart = d.toISOString();
+            }
+          } catch {
+            // fallback
+          }
+        }
+        if (!slotStart && slot.slot_display) {
+          const [d, t] = slot.slot_display.split("T");
+          if (d && t) {
+            const dObj = new Date(`${d}T${t}:00${parisOffset(d, t)}`);
+            if (!Number.isNaN(dObj.getTime())) slotStart = dObj.toISOString();
+          }
+          if (!slotStart) {
+            const dObj = new Date(slot.slot_display);
+            if (!Number.isNaN(dObj.getTime())) slotStart = dObj.toISOString();
+          }
+        }
+
+        let slotEnd = slot.slot_end;
+        if (!slotEnd && slotStart) {
+          slotEnd = new Date(new Date(slotStart).getTime() + duration * 60_000).toISOString();
+        }
+
+        return {
+          resource_id: slot.resource_id,
+          resource_name: slot.resource_name,
+          slot_start: slotStart ?? "",
+          slot_end: slotEnd ?? "",
+        };
+      });
     }
     return Response.json({ business, services: services ?? [], resources: resources ?? [], slots });
   } catch (error) {
