@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import React, {
   startTransition,
   useCallback,
   useEffect,
@@ -111,6 +111,11 @@ export default function Calendar({
     string | null
   >(null);
   const [addAppointmentOpen, setAddAppointmentOpen] = useState(false);
+  const blockTriggerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!block) blockTriggerRef.current?.focus();
+  }, [block]);
 
   const load = useCallback(async () => {
     const query = new URLSearchParams({ date });
@@ -178,6 +183,49 @@ export default function Calendar({
   const phoneAppointmentsCount = useMemo(() => {
     return confirmedAppointments.filter((item) => item.booked_by === "phone").length;
   }, [confirmedAppointments]);
+
+  const isToday = date === parisDate();
+
+  const nextAppointment = useMemo(() => {
+    if (!confirmedAppointments.length) return null;
+    const nowTime = new Date().getTime();
+    const sorted = [...confirmedAppointments].sort(
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+    );
+    if (isToday) {
+      const upcoming = sorted.find((a) => new Date(a.start_time).getTime() >= nowTime);
+      return upcoming || sorted[0];
+    }
+    return sorted[0];
+  }, [confirmedAppointments, isToday]);
+
+  const summaryLine = useMemo(() => {
+    if (confirmedAppointments.length === 0) {
+      return isToday ? "0 rendez-vous aujourd'hui" : `0 rendez-vous le ${displayDate(date)}`;
+    }
+    const countStr = `${confirmedAppointments.length} rendez-vous ${isToday ? "aujourd'hui" : ""}`.trim();
+    if (nextAppointment) {
+      const timeStr = formatTime(nextAppointment.start_time);
+      const clientName = nextAppointment.customer?.name || "Client";
+      return `${countStr} · prochain à ${timeStr} (${clientName})`;
+    }
+    return countStr;
+  }, [confirmedAppointments, isToday, nextAppointment, date]);
+
+  const currentOrNextRowTime = useMemo(() => {
+    if (!isToday || !times.length) return null;
+    if (nextAppointment) {
+      return formatTime(nextAppointment.start_time);
+    }
+    const nowParis = new Intl.DateTimeFormat("fr-FR", {
+      timeZone: "Europe/Paris",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+    const slot = [...times].reverse().find((t) => t <= nowParis);
+    return slot || times[0];
+  }, [isToday, times, nextAppointment]);
+
   async function saveAppointment(
     appointmentId: string,
     startTime: string,
@@ -241,55 +289,55 @@ export default function Calendar({
             onClose={() => setNotice("")}
           />
         )}
-        <div className="toolbar">
-          <div>
-            <p className="kicker">Planning du jour</p>
-            <h2>{displayDate(date)}</h2>
-            <p style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
-              <span>
-                {data?.opening
-                  ? `${data.opening.open_time.slice(0, 5)} - ${data.opening.close_time.slice(0, 5)} · Europe/Paris`
-                  : "Fermé"}
-              </span>
-              {confirmedAppointments.length > 0 && (
-                <span style={{ color: "var(--color-text-dim)" }}>
-                  · {confirmedAppointments.length} rendez-vous
-                </span>
-              )}
-              {phoneAppointmentsCount > 0 && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "var(--color-accent-soft)" }}>
-                  · <WaveIndicator state="success" /> {phoneAppointmentsCount} par téléphone
-                </span>
-              )}
-            </p>
+
+        {/* Sticky Header: Navigation date, Résumé 1 ligne & Filtre praticien */}
+        <div className="sticky top-0 z-20 bg-[var(--color-bg)]/95 backdrop-blur-md pt-2 pb-3 mb-4 border-b border-[var(--color-border)]">
+          <div className="toolbar !m-0 !p-0">
+            <div>
+              <p className="kicker">Planning du jour</p>
+              <h2 className="capitalize">{displayDate(date)}</h2>
+              <p className="text-sm font-medium text-[var(--color-accent-soft)] flex items-center gap-2 mt-1">
+                <span>{summaryLine}</span>
+                {phoneAppointmentsCount > 0 && (
+                  <span className="inline-flex items-center gap-1 text-xs text-[var(--color-text-dim)] bg-[var(--color-bg-subtle)] px-2 py-0.5 rounded-full">
+                    <WaveIndicator state="success" /> {phoneAppointmentsCount} par téléphone
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="actions flex items-center gap-2">
+              <button
+                className="button min-w-[44px] min-h-[44px]"
+                onClick={() => setDate(shiftDate(date, -1))}
+                aria-label="Jour précédent"
+              >
+                ←
+              </button>
+              <button
+                className={`button min-h-[44px] ${isToday ? "primary font-semibold" : ""}`}
+                onClick={() => setDate(parisDate())}
+              >
+                Aujourd&apos;hui
+              </button>
+              <button
+                className="button min-w-[44px] min-h-[44px]"
+                onClick={() => setDate(shiftDate(date, 1))}
+                aria-label="Jour suivant"
+              >
+                →
+              </button>
+            </div>
           </div>
-          <div className="actions">
-            <button
-              className="button"
-              onClick={() => setDate(shiftDate(date, -1))}
-              aria-label="Jour précédent"
-            >
-              ←
-            </button>
-            <button className="button" onClick={() => setDate(parisDate())}>
-              Aujourd&apos;hui
-            </button>
-            <button
-              className="button"
-              onClick={() => setDate(shiftDate(date, 1))}
-              aria-label="Jour suivant"
-            >
-              →
-            </button>
-          </div>
-        </div>
-        <div className="panel">
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="resource-filter">Coiffeur</label>
+
+          {/* Filtres & Statut salon */}
+          <div className="mt-3 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label htmlFor="resource-filter" className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                Coiffeur :
+              </label>
               <select
                 id="resource-filter"
-                className="select"
+                className="select !py-1.5 !px-3 text-sm min-h-[40px]"
                 value={selectedResource}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -304,8 +352,15 @@ export default function Calendar({
                 ))}
               </select>
             </div>
+
+            <div className="text-xs text-[var(--color-text-dim)]">
+              {data?.opening
+                ? `${data.opening.open_time.slice(0, 5)} - ${data.opening.close_time.slice(0, 5)} · Europe/Paris`
+                : "Salon fermé"}
+            </div>
           </div>
         </div>
+
         <CallbackPanel businessId={businessId} onError={setError} />
         {!loaded ? (
           <div className="flex flex-col gap-4 mt-4 animate-pulse">
@@ -336,56 +391,25 @@ export default function Calendar({
             data={data}
             resources={resources}
             selectedResource={selectedResource}
-            onFree={(start) =>
-              selectedResource !== "all" &&
-              setBlock({ resourceId: selectedResource, start })
-            }
+            targetTime={currentOrNextRowTime}
+            onFree={(resId, start, trigger) => {
+              blockTriggerRef.current = trigger;
+              setBlock({ resourceId: resId, start });
+            }}
             onOccupied={setSelectedAppointmentId}
           />
         )}
-        {block && (
-          <div className="panel">
-            <h3>
-              Bloquer le créneau de{" "}
-              {
-                data?.resources.find(
-                  (resource) => resource.id === block.resourceId,
-                )?.name
-              }{" "}
-              à {formatTime(block.start)}
-            </h3>
-            <div className="field-row">
-              <div className="field">
-                <label>Durée</label>
-                <select
-                  className="select"
-                  value={duration}
-                  onChange={(event) => setDuration(event.target.value)}
-                >
-                  <option value="15">15 minutes</option>
-                  <option value="30">30 minutes</option>
-                  <option value="45">45 minutes</option>
-                  <option value="60">1 heure</option>
-                  <option value="90">1 h 30</option>
-                </select>
-              </div>
-              <div className="field">
-                <label>Libellé (optionnel)</label>
-                <input
-                  className="input"
-                  placeholder="Pause déjeuner"
-                  value={label}
-                  onChange={(event) => setLabel(event.target.value)}
-                />
-              </div>
-              <button className="button primary" onClick={saveBlock}>
-                Bloquer
-              </button>
-              <button className="button" onClick={() => setBlock(null)}>
-                Fermer
-              </button>
-            </div>
-          </div>
+        {block && data && (
+          <BlockAppointmentModal
+            block={block}
+            resourceName={data.resources.find((resource) => resource.id === block.resourceId)?.name || "Coiffeur"}
+            duration={duration}
+            label={label}
+            onDurationChange={setDuration}
+            onLabelChange={setLabel}
+            onSave={saveBlock}
+            onClose={() => setBlock(null)}
+          />
         )}
         {selectedAppointment && data && (
           <AppointmentModal
@@ -667,11 +691,103 @@ function TimePicker({
   );
 }
 
+function BlockAppointmentModal({
+  block,
+  resourceName,
+  duration,
+  label,
+  onDurationChange,
+  onLabelChange,
+  onSave,
+  onClose,
+}: {
+  block: { resourceId: string; start: string };
+  resourceName: string;
+  duration: string;
+  label: string;
+  onDurationChange: (value: string) => void;
+  onLabelChange: (value: string) => void;
+  onSave: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const modalRef = useRef<HTMLElement>(null);
+  useModalFocusTrap(modalRef, onClose);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    await onSave();
+  }
+
+  return (
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        ref={modalRef}
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="block-appointment-title"
+      >
+        <div className="modal-header">
+          <div>
+            <p className="kicker">Blocage manuel</p>
+            <h3 id="block-appointment-title">Bloquer le créneau</h3>
+            <p className="modal-note">{resourceName} · {formatTime(block.start)}</p>
+          </div>
+          <button type="button" className="button ghost" onClick={onClose} aria-label="Fermer">
+            ×
+          </button>
+        </div>
+        <form className="modal-form" onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="block-duration">Durée</label>
+            <select
+              id="block-duration"
+              className="select"
+              value={duration}
+              onChange={(event) => onDurationChange(event.target.value)}
+            >
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">1 heure</option>
+              <option value="90">1 h 30</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="block-label">Libellé (optionnel)</label>
+            <input
+              id="block-label"
+              className="input"
+              placeholder="Pause déjeuner"
+              value={label}
+              onChange={(event) => onLabelChange(event.target.value)}
+            />
+          </div>
+          <div className="modal-actions">
+            <span />
+            <button type="button" className="button" onClick={onClose}>
+              Annuler
+            </button>
+            <button type="submit" className="button primary">
+              Bloquer
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 function CompactCalendar({
   times,
   data,
   resources,
   selectedResource,
+  targetTime,
   onFree,
   onOccupied,
 }: {
@@ -679,107 +795,320 @@ function CompactCalendar({
   data: CalendarData;
   resources: CalendarData["resources"];
   selectedResource: string;
-  onFree: (start: string) => void;
+  targetTime?: string | null;
+  onFree: (resourceId: string, start: string, trigger: HTMLElement) => void;
   onOccupied: (id: string) => void;
 }) {
+  const targetRowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (targetRowRef.current) {
+      const el = targetRowRef.current;
+      const timer = setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [targetTime]);
+
   const appointments = data.appointments.filter(
     (item) =>
       item.status === "confirmed" &&
       (selectedResource === "all" || item.resource_id === selectedResource),
   );
-  const available = new Set(
-    data.slots
-      .filter(
-        (slot) =>
-          selectedResource === "all" || slot.resource_id === selectedResource,
-      )
-      .map((slot) => formatTime(slot.slot_start)),
-  );
+
+  const availableSlots = useMemo(() => {
+    const set = new Set<string>();
+    for (const slot of data.slots) {
+      set.add(`${slot.resource_id}|${formatTime(slot.slot_start)}`);
+    }
+    return set;
+  }, [data.slots]);
+
+  const isMultiColumn = selectedResource === "all" && resources.length > 1;
+
   return (
     <div className="timeline-wrap">
-      <div className="legend">
-        {resources.map((resource) => (
-          <span className="legend-item" key={resource.id}>
-            <i style={{ backgroundColor: resource.color }} />
-            {resource.name}
+      {/* Legend */}
+      <div className="legend flex items-center justify-between flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {resources.map((resource) => (
+            <span className="legend-item" key={resource.id}>
+              <i style={{ backgroundColor: resource.color }} />
+              {resource.name}
+            </span>
+          ))}
+        </div>
+        {selectedResource === "all" && (
+          <span className="text-xs text-[var(--color-text-muted)] italic">
+            Sélectionnez un coiffeur pour bloquer un créneau.
           </span>
-        ))}
+        )}
       </div>
-      <div className="timeline-head">
-        <span>Heure</span>
-        <span>Rendez-vous et disponibilités</span>
-      </div>
-      {times.map((time) => {
-        const rowAppointments = appointments.filter(
-          (item) => formatTime(item.start_time) === time,
-        );
-        const start = parisToISO(data.date, time);
-        const canBlock =
-          selectedResource !== "all" &&
-          available.has(time) &&
-          rowAppointments.length === 0;
-        return (
-          <div
-            className={`timeline-row ${canBlock ? "timeline-free" : ""}`}
-            key={time}
-            role={canBlock ? "button" : undefined}
-            tabIndex={canBlock ? 0 : undefined}
-            onClick={() => canBlock && onFree(start)}
-            onKeyDown={(e) => {
-              if (canBlock && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                onFree(start);
-              }
-            }}
-          >
-            <time>{time}</time>
-            <div className="timeline-events">
-              {rowAppointments.map((appointment) => {
-                const resource = resources.find(
-                  (item) => item.id === appointment.resource_id,
-                );
+
+      {/* Multi-column view for Desktop when "all" is selected */}
+      {isMultiColumn ? (
+        <>
+          {/* Desktop view (>= 768px) */}
+          <div className="hidden md:block overflow-x-auto">
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `5rem repeat(${resources.length}, minmax(130px, 1fr))`,
+              }}
+            >
+              {/* Sticky column headers */}
+              <div className="sticky top-0 z-10 bg-[var(--color-bg-panel-2)] p-2 text-xs font-semibold text-[var(--color-text-muted)] border-b border-r border-[var(--color-border)] text-center">
+                Heure
+              </div>
+              {resources.map((res) => (
+                <div
+                  key={res.id}
+                  className="sticky top-0 z-10 bg-[var(--color-bg-panel-2)] p-2 text-xs font-bold text-[var(--color-text)] border-b border-r border-[var(--color-border)] last:border-r-0 flex items-center justify-center gap-1.5"
+                  style={{ borderTop: `3px solid ${res.color}` }}
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: res.color }} />
+                  <span className="truncate">{res.name}</span>
+                </div>
+              ))}
+
+              {/* Grid content rows */}
+              {times.map((time) => {
+                const isTarget = time === targetTime;
+                const start = parisToISO(data.date, time);
+
                 return (
-                  <button
-                    className={`timeline-event ${appointment.booked_by === "block" ? "timeline-block" : ""}`}
-                    style={
-                      {
-                        "--event-color": resource?.color || "var(--color-accent)",
-                      } as React.CSSProperties
-                    }
-                    key={appointment.id}
-                    aria-label={`RDV ${appointment.booked_by === "block" ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${time}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOccupied(appointment.id);
-                    }}
-                  >
-                    <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                      {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
-                      {appointment.booked_by === "block"
-                        ? appointment.block_label || "Indisponible"
-                        : appointment.customer?.name || "Client"}
-                    </strong>
-                    <span>
-                      {resource?.name || "Coiffeur"} ·{" "}
-                      {appointment.service?.name || "Blocage"} ·{" "}
-                      {formatTime(appointment.end_time)}
-                    </span>
-                  </button>
+                  <React.Fragment key={time}>
+                    <div
+                      ref={isTarget ? targetRowRef : undefined}
+                      className={`border-b border-r border-[var(--color-border)] p-1.5 text-xs text-[var(--color-text-muted)] flex items-center justify-center font-mono h-[36px] ${
+                        isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] font-bold text-[var(--color-accent)]" : ""
+                      }`}
+                    >
+                      {time}
+                    </div>
+
+                    {resources.map((res) => {
+                      const resAppts = appointments.filter(
+                        (item) => item.resource_id === res.id && formatTime(item.start_time) === time,
+                      );
+                      const isFree = resAppts.length === 0 && availableSlots.has(`${res.id}|${time}`);
+
+                      return (
+                        <div
+                          key={res.id}
+                          className={`relative border-b border-r border-[var(--color-border)] last:border-r-0 h-[36px] p-0.5 flex items-center group transition-colors ${
+                            isFree ? "hover:bg-[color-mix(in_srgb,var(--color-accent)_8%,var(--color-bg-panel))] cursor-pointer" : ""
+                          }`}
+                          role={isFree ? "button" : undefined}
+                          tabIndex={isFree ? 0 : undefined}
+                          onClick={(event) => isFree && onFree(res.id, start, event.currentTarget)}
+                          onKeyDown={(event) => {
+                            if (isFree && (event.key === "Enter" || event.key === " ")) {
+                              event.preventDefault();
+                              onFree(res.id, start, event.currentTarget);
+                            }
+                          }}
+                        >
+                          <div className="timeline-appointment-layer">
+                          {resAppts.map((appt) => {
+                            const durationMin =
+                              Math.round(
+                                (new Date(appt.end_time).getTime() - new Date(appt.start_time).getTime()) /
+                                  60000,
+                              ) || 30;
+                            const span = Math.max(1, Math.round(durationMin / 15));
+                            const isBlock = appt.booked_by === "block";
+
+                            return (
+                              <button
+                                key={appt.id}
+                                type="button"
+                                className="absolute inset-x-0.5 top-0.5 z-10 p-1 rounded text-left text-xs transition-all overflow-hidden shadow-xs cursor-pointer border-l-3"
+                                style={{
+                                  height: `${span * 36 - 4}px`,
+                                  borderLeftColor: res.color,
+                                  backgroundColor: `color-mix(in srgb, ${res.color} 18%, var(--color-bg-panel))`,
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOccupied(appt.id);
+                                }}
+                                aria-label={`RDV ${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} à ${time}`}
+                              >
+                                <div className="font-semibold truncate flex items-center gap-1 text-[var(--color-text)] leading-tight text-[11px]">
+                                  {appt.booked_by === "phone" && <WaveIndicator state="success" />}
+                                  <span className="truncate">{isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"}</span>
+                                </div>
+                                <div className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
+                                  {appt.service?.name || "Blocage"} · {formatTime(appt.end_time)}
+                                </div>
+                              </button>
+                            );
+                          })}
+                          </div>
+                          {isFree && (
+                            <span className="opacity-0 group-hover:opacity-100 text-[var(--color-accent)] text-xs font-semibold mx-auto transition-opacity">
+                              +
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
                 );
               })}
-              {rowAppointments.length === 0 && (
-                <span className="timeline-empty">
-                  {selectedResource === "all"
-                    ? "Sélectionnez un Coiffeur pour bloquer"
-                    : canBlock
-                      ? "Libre · cliquer pour bloquer"
-                      : "Libre"}
-                </span>
-              )}
             </div>
           </div>
-        );
-      })}
+
+          {/* Mobile view (< 768px): single column list */}
+          <div className="block md:hidden">
+            <div className="timeline-head">
+              <span>Heure</span>
+              <span>Rendez-vous et disponibilités</span>
+            </div>
+            {times.map((time) => {
+              const rowAppointments = appointments.filter(
+                (item) => formatTime(item.start_time) === time,
+              );
+              const isTarget = time === targetTime;
+
+              return (
+                <div
+                  ref={isTarget ? targetRowRef : undefined}
+                  className={`timeline-row h-[36px] ${isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""}`}
+                  key={time}
+                >
+                  <time>{time}</time>
+                  <div className="timeline-events">
+                    {rowAppointments.map((appointment) => {
+                      const resource = resources.find(
+                        (item) => item.id === appointment.resource_id,
+                      );
+                      const durationMin =
+                        Math.round(
+                          (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) /
+                            60000,
+                        ) || 30;
+
+                      return (
+                        <button
+                          className={`timeline-event ${appointment.booked_by === "block" ? "timeline-block" : ""}`}
+                          style={
+                            {
+                              "--event-color": resource?.color || "var(--color-accent)",
+                            } as React.CSSProperties
+                          }
+                          key={appointment.id}
+                          aria-label={`RDV ${appointment.booked_by === "block" ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${time}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onOccupied(appointment.id);
+                          }}
+                        >
+                          <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                            {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
+                            {appointment.booked_by === "block"
+                              ? appointment.block_label || "Indisponible"
+                              : appointment.customer?.name || "Client"}
+                          </strong>
+                          <span>
+                            {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        /* Single column view (filtered by specific resource) */
+        <div>
+          <div className="timeline-head">
+            <span>Heure</span>
+            <span>Rendez-vous et disponibilités</span>
+          </div>
+          {times.map((time) => {
+            const rowAppointments = appointments.filter(
+              (item) => formatTime(item.start_time) === time,
+            );
+            const start = parisToISO(data.date, time);
+            const canBlock =
+              selectedResource !== "all" &&
+              availableSlots.has(`${selectedResource}|${time}`) &&
+              rowAppointments.length === 0;
+            const isTarget = time === targetTime;
+
+            return (
+              <div
+                ref={isTarget ? targetRowRef : undefined}
+                className={`timeline-row group ${canBlock ? "timeline-free" : ""} ${
+                  isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""
+                }`}
+                key={time}
+                role={canBlock ? "button" : undefined}
+                tabIndex={canBlock ? 0 : undefined}
+                onClick={(event) => canBlock && onFree(selectedResource, start, event.currentTarget)}
+                onKeyDown={(e) => {
+                  if (canBlock && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    onFree(selectedResource, start, e.currentTarget);
+                  }
+                }}
+              >
+                <time>{time}</time>
+                <div className="timeline-events justify-between">
+                  {rowAppointments.map((appointment) => {
+                    const resource = resources.find(
+                      (item) => item.id === appointment.resource_id,
+                    );
+                    const durationMin =
+                      Math.round(
+                        (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) /
+                          60000,
+                      ) || 30;
+
+                    return (
+                      <button
+                        className={`timeline-event ${appointment.booked_by === "block" ? "timeline-block" : ""}`}
+                        style={
+                          {
+                            "--event-color": resource?.color || "var(--color-accent)",
+                          } as React.CSSProperties
+                        }
+                        key={appointment.id}
+                        aria-label={`RDV ${appointment.booked_by === "block" ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${time}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onOccupied(appointment.id);
+                        }}
+                      >
+                        <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                          {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
+                          {appointment.booked_by === "block"
+                            ? appointment.block_label || "Indisponible"
+                            : appointment.customer?.name || "Client"}
+                        </strong>
+                        <span>
+                          {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {rowAppointments.length === 0 && canBlock && (
+                    <span className="opacity-0 group-hover:opacity-100 text-[var(--color-accent)] text-xs font-semibold px-2 transition-opacity">
+                      + Bloquer ce créneau
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
