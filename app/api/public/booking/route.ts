@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase";
 import { isWithinOpeningHours } from "@/lib/business-hours";
+import { normalizeFrenchPhone } from "@/lib/format-phone";
 
 const parisDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
 
@@ -31,12 +32,14 @@ export async function GET(request: Request) {
     const serviceId = params.get("serviceId") || "";
     const resourceId = params.get("resourceId") || "";
     const business = await getBusiness(supabase, businessId);
-    const [{ data: services, error: servicesError }, { data: resources, error: resourcesError }] = await Promise.all([
-      supabase.from("services").select("id, name, duration_minutes").eq("business_id", business.id).eq("active", true).order("name"),
+    const [{ data: services, error: servicesError }, { data: resources, error: resourcesError }, { data: businessHours, error: hoursError }] = await Promise.all([
+      supabase.from("services").select("id, name, duration_minutes, price").eq("business_id", business.id).eq("active", true).order("name"),
       supabase.from("resources").select("id, name, capacity, active, color").eq("business_id", business.id).eq("resource_type", "practitioner").eq("active", true).order("name"),
+      supabase.from("business_hours").select("day_of_week, open_time, close_time").eq("business_id", business.id),
     ]);
     if (servicesError) throw servicesError;
     if (resourcesError) throw resourcesError;
+    if (hoursError) throw hoursError;
 
     let slots: { resource_id: string; resource_name: string; slot_start: string; slot_end: string }[] = [];
     if (serviceId) {
@@ -106,7 +109,7 @@ export async function GET(request: Request) {
         };
       });
     }
-    return Response.json({ business, services: services ?? [], resources: resources ?? [], slots });
+    return Response.json({ business, services: services ?? [], resources: resources ?? [], businessHours: businessHours ?? [], slots });
   } catch (error) {
     console.error(error);
     return Response.json({ error: "Impossible de charger les disponibilités." }, { status: 500 });
@@ -120,11 +123,12 @@ export async function POST(request: Request) {
     const businessId = String(body.businessId ?? "");
     if (!businessId) return Response.json({ error: "Salon non spécifié." }, { status: 400 });
     const name = String(body.customerName ?? "").trim();
-    const phone = String(body.customerPhone ?? "").trim();
+    const phone = normalizeFrenchPhone(String(body.customerPhone ?? ""));
     const resourceId = String(body.resourceId ?? "");
     const serviceId = String(body.serviceId ?? "");
     const startTime = String(body.startTime ?? "");
     if (!name || !resourceId || !serviceId || !startTime) return Response.json({ error: "Veuillez remplir tous les champs obligatoires." }, { status: 400 });
+    if (!phone) return Response.json({ error: "Numéro de téléphone invalide. Utilisez 06 12 34 56 78 ou +33 6 12 34 56 78." }, { status: 400 });
     if (Number.isNaN(new Date(startTime).getTime())) return Response.json({ error: "Date ou heure invalide." }, { status: 400 });
 
     const { data: resource, error: resourceError } = await supabase.from("resources").select("business_id").eq("id", resourceId).eq("business_id", businessId).eq("resource_type", "practitioner").eq("active", true).single();
