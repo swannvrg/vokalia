@@ -471,6 +471,14 @@ input[type="color"].input {
   outline: 2px solid var(--slot-color);
   outline-offset: 1px;
 }
+.slot-choice.selected::after {
+  content: "Créneau choisi";
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--color-text-dim);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
 .booking-submit {
   width: 100%;
   margin-top: 1.5rem;

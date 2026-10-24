@@ -49,14 +49,18 @@ export default function BookingForm({ businessId }: { businessId: string }) {
     const groups = new Map<string, Map<string, Slot>>();
     for (const slot of data?.slots ?? []) {
       if (!slot.slot_start) continue;
-      const slotsAtTime = groups.get(slot.slot_start) ?? new Map<string, Slot>();
+      const displayedTime = formatTime(slot.slot_start);
+      const slotsAtTime = groups.get(displayedTime) ?? new Map<string, Slot>();
       slotsAtTime.set(slot.resource_id, slot);
-      groups.set(slot.slot_start, slotsAtTime);
+      groups.set(displayedTime, slotsAtTime);
     }
     return [...groups.values()].map((slots) => [...slots.values()]);
   }, [data]);
 
   const canSubmit = Boolean(serviceId && selectedSlot && name.trim() && phone.trim()) && !booking;
+    const selectedSlotLabel = selectedSlot
+      ? `${selectedSlot.resource_name} · ${formatTime(selectedSlot.slot_start)}`
+      : "";
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
