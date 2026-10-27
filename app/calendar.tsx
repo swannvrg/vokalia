@@ -9,6 +9,7 @@ import React, {
   useRef,
 } from "react";
 import type { CalendarData } from "@/lib/types";
+import { SLOT_STEP_MINUTES } from "@/lib/constants";
 import Toast from "@/app/components/toast";
 import Icon from "@/app/components/Icon";
 import DashboardShell from "@/app/components/DashboardShell";
@@ -68,18 +69,21 @@ const shiftDate = (date: string, amount: number) => {
   next.setUTCDate(next.getUTCDate() + amount);
   return next.toISOString().slice(0, 10);
 };
+const toMinutes = (value: string) => {
+  const [hour, minute] = value.slice(0, 5).split(":").map(Number);
+  return (hour || 0) * 60 + (minute || 0);
+};
+
+const ROW_HEIGHT = 44; // Hauteur en pixels d'une ligne de 30 minutes
+
 const timeOptionsFor = (opening: CalendarData["opening"]) => {
   if (!opening) return [];
-  const toMinutes = (value: string) => {
-    const [hour, minute] = value.slice(0, 5).split(":").map(Number);
-    return hour * 60 + minute;
-  };
   const start = toMinutes(opening.open_time);
   const end = toMinutes(opening.close_time);
   return Array.from(
-    { length: Math.max(0, Math.floor((end - start) / 15)) + 1 },
+    { length: Math.max(0, Math.floor((end - start) / SLOT_STEP_MINUTES)) + 1 },
     (_, index) => {
-      const minutes = start + index * 15;
+      const minutes = start + index * SLOT_STEP_MINUTES;
       return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
     },
   );
@@ -219,7 +223,10 @@ export default function Calendar({
   const currentOrNextRowTime = useMemo(() => {
     if (!isToday || !times.length) return null;
     if (nextAppointment) {
-      return formatTime(nextAppointment.start_time);
+      const apptTime = formatTime(nextAppointment.start_time);
+      const apptMinutes = toMinutes(apptTime);
+      const matchingSlot = [...times].reverse().find((t) => toMinutes(t) <= apptMinutes);
+      return matchingSlot || times[0];
     }
     const nowParis = new Intl.DateTimeFormat("fr-FR", {
       timeZone: "Europe/Paris",
@@ -672,6 +679,13 @@ function TimePicker({
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const fullOptions = useMemo(() => {
+    if (value && !options.includes(value)) {
+      return [...options, value].sort();
+    }
+    return options;
+  }, [value, options]);
+
   return (
     <div className="time-picker">
       <button
@@ -689,7 +703,7 @@ function TimePicker({
           role="listbox"
           aria-label="Choisir une heure"
         >
-          {options.map((option) => (
+          {fullOptions.map((option) => (
             <button
               type="button"
               className={`time-picker-option ${option === value ? "selected" : ""}`}
@@ -771,11 +785,10 @@ function BlockAppointmentModal({
               value={duration}
               onChange={(event) => onDurationChange(event.target.value)}
             >
-              <option value="15">15 minutes</option>
               <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
               <option value="60">1 heure</option>
               <option value="90">1 h 30</option>
+              <option value="120">2 heures</option>
             </select>
           </div>
           <div className="field">
@@ -889,27 +902,33 @@ function CompactCalendar({
               ))}
 
               {/* Grid content rows */}
-              {times.map((time) => {
+              {times.map((time, timeIndex) => {
                 const isTarget = time === targetTime;
                 const start = parisToISO(data.date, time);
+                const slotStart = new Date(start).getTime();
+                const slotEnd = slotStart + SLOT_STEP_MINUTES * 60_000;
+                const slotStartMin = toMinutes(time);
+                const slotEndMin = slotStartMin + SLOT_STEP_MINUTES;
 
                 return (
                   <React.Fragment key={time}>
                     <div
                       ref={isTarget ? targetRowRef : undefined}
-                      className={`border-b border-r border-[var(--color-border)] p-1.5 text-xs text-[var(--color-text-muted)] flex items-center justify-center font-mono h-[36px] ${
+                      className={`border-b border-r border-[var(--color-border)] p-1.5 text-xs text-[var(--color-text-muted)] flex items-center justify-center font-mono ${
                         isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] font-bold text-[var(--color-accent)]" : ""
                       }`}
+                      style={{ height: `${ROW_HEIGHT}px` }}
                     >
                       {time}
                     </div>
 
                     {resources.map((res) => {
-                      const slotStart = new Date(start).getTime();
-                      const slotEnd = slotStart + 15 * 60_000;
-                      const displayedAppointments = appointments.filter(
-                        (item) => item.resource_id === res.id && formatTime(item.start_time) === time,
-                      );
+                      const displayedAppointments = appointments.filter((item) => {
+                        if (item.resource_id !== res.id) return false;
+                        const apptMin = toMinutes(formatTime(item.start_time));
+                        if (timeIndex === 0 && apptMin < slotStartMin) return true;
+                        return apptMin >= slotStartMin && apptMin < slotEndMin;
+                      });
                       const occupiedAppointments = appointments.filter((item) => {
                         const appointmentStart = new Date(item.start_time).getTime();
                         const appointmentEnd = new Date(item.end_time).getTime();
@@ -920,9 +939,10 @@ function CompactCalendar({
                       return (
                         <div
                           key={res.id}
-                          className={`relative border-b border-r border-[var(--color-border)] last:border-r-0 h-[36px] p-0.5 flex items-center group transition-colors ${
+                          className={`relative border-b border-r border-[var(--color-border)] last:border-r-0 p-0.5 flex items-center group transition-colors ${
                             isFree ? "hover:bg-[color-mix(in_srgb,var(--color-accent)_8%,var(--color-bg-panel))] cursor-pointer" : ""
                           }`}
+                          style={{ height: `${ROW_HEIGHT}px` }}
                           role={isFree ? "button" : undefined}
                           tabIndex={isFree ? 0 : undefined}
                           onClick={(event) => isFree && onFree(res.id, start, event.currentTarget)}
@@ -936,21 +956,25 @@ function CompactCalendar({
                         >
                           <div className="timeline-appointment-layer">
                           {displayedAppointments.map((appt) => {
+                            const apptMin = toMinutes(formatTime(appt.start_time));
+                            const offsetMin = Math.max(0, apptMin - slotStartMin);
+                            const topPx = (offsetMin / SLOT_STEP_MINUTES) * ROW_HEIGHT + 2;
                             const durationMin =
                               Math.round(
                                 (new Date(appt.end_time).getTime() - new Date(appt.start_time).getTime()) /
                                   60000,
-                              ) || 30;
-                            const span = Math.max(1, Math.round(durationMin / 15));
+                              ) || SLOT_STEP_MINUTES;
+                            const heightPx = Math.max(18, (durationMin / SLOT_STEP_MINUTES) * ROW_HEIGHT - 4);
                             const isBlock = appt.booked_by === "block";
 
                             return (
                               <button
                                 key={appt.id}
                                 type="button"
-                                className="absolute inset-x-0.5 top-0.5 z-10 p-1 rounded text-left text-xs transition-all overflow-hidden shadow-xs cursor-pointer border-l-3"
+                                className="absolute inset-x-0.5 z-10 p-1 rounded text-left text-xs transition-all overflow-hidden shadow-xs cursor-pointer border-l-3"
                                 style={{
-                                  height: `${span * 36 - 4}px`,
+                                  top: `${topPx}px`,
+                                  height: `${heightPx}px`,
                                   borderLeftColor: res.color,
                                   backgroundColor: `color-mix(in srgb, ${res.color} 18%, var(--color-bg-panel))`,
                                 }}
@@ -958,15 +982,18 @@ function CompactCalendar({
                                   e.stopPropagation();
                                   onOccupied(appt.id);
                                 }}
-                                aria-label={`RDV ${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} à ${time}`}
+                                aria-label={`RDV ${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} à ${formatTime(appt.start_time)}`}
+                                title={`${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} · ${formatTime(appt.start_time)} - ${formatTime(appt.end_time)}`}
                               >
                                 <div className="font-semibold truncate flex items-center gap-1 text-[var(--color-text)] leading-tight text-[11px]">
                                   {appt.booked_by === "phone" && <WaveIndicator state="success" />}
                                   <span className="truncate">{isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"}</span>
                                 </div>
-                                <div className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
-                                  {appt.service?.name || "Blocage"} · {formatTime(appt.end_time)}
-                                </div>
+                                {durationMin >= 25 && (
+                                  <div className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
+                                    {appt.service?.name || "Blocage"} · {formatTime(appt.start_time)} - {formatTime(appt.end_time)}
+                                  </div>
+                                )}
                               </button>
                             );
                           })}
@@ -991,16 +1018,21 @@ function CompactCalendar({
               <span>Heure</span>
               <span>Rendez-vous et disponibilités</span>
             </div>
-            {times.map((time) => {
-              const rowAppointments = appointments.filter(
-                (item) => formatTime(item.start_time) === time,
-              );
+            {times.map((time, timeIndex) => {
+              const slotStartMin = toMinutes(time);
+              const slotEndMin = slotStartMin + SLOT_STEP_MINUTES;
+              const rowAppointments = appointments.filter((item) => {
+                const apptMin = toMinutes(formatTime(item.start_time));
+                if (timeIndex === 0 && apptMin < slotStartMin) return true;
+                return apptMin >= slotStartMin && apptMin < slotEndMin;
+              });
               const isTarget = time === targetTime;
 
               return (
                 <div
                   ref={isTarget ? targetRowRef : undefined}
-                  className={`timeline-row h-[36px] ${isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""}`}
+                  className={`timeline-row ${isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""}`}
+                  style={{ minHeight: `${ROW_HEIGHT}px` }}
                   key={time}
                 >
                   <time>{time}</time>
@@ -1013,18 +1045,19 @@ function CompactCalendar({
                         Math.round(
                           (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) /
                             60000,
-                        ) || 30;
+                        ) || SLOT_STEP_MINUTES;
+                      const isBlock = appointment.booked_by === "block";
 
                       return (
                         <button
-                          className={`timeline-event ${appointment.booked_by === "block" ? "timeline-block" : ""}`}
+                          className={`timeline-event ${isBlock ? "timeline-block" : ""}`}
                           style={
                             {
                               "--event-color": resource?.color || "var(--color-accent)",
                             } as React.CSSProperties
                           }
                           key={appointment.id}
-                          aria-label={`RDV ${appointment.booked_by === "block" ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${time}`}
+                          aria-label={`RDV ${isBlock ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${formatTime(appointment.start_time)}`}
                           onClick={(event) => {
                             event.stopPropagation();
                             onOccupied(appointment.id);
@@ -1032,12 +1065,12 @@ function CompactCalendar({
                         >
                           <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                             {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
-                            {appointment.booked_by === "block"
+                            {isBlock
                               ? appointment.block_label || "Indisponible"
                               : appointment.customer?.name || "Client"}
                           </strong>
                           <span>
-                            {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
+                            {formatTime(appointment.start_time)} · {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
                           </span>
                         </button>
                       );
@@ -1055,13 +1088,18 @@ function CompactCalendar({
             <span>Heure</span>
             <span>Rendez-vous et disponibilités</span>
           </div>
-          {times.map((time) => {
+          {times.map((time, timeIndex) => {
             const start = parisToISO(data.date, time);
             const slotStart = new Date(start).getTime();
-            const slotEnd = slotStart + 15 * 60_000;
-            const displayedAppointments = appointments.filter(
-              (item) => item.resource_id === selectedResource && formatTime(item.start_time) === time,
-            );
+            const slotEnd = slotStart + SLOT_STEP_MINUTES * 60_000;
+            const slotStartMin = toMinutes(time);
+            const slotEndMin = slotStartMin + SLOT_STEP_MINUTES;
+            const displayedAppointments = appointments.filter((item) => {
+              if (item.resource_id !== selectedResource) return false;
+              const apptMin = toMinutes(formatTime(item.start_time));
+              if (timeIndex === 0 && apptMin < slotStartMin) return true;
+              return apptMin >= slotStartMin && apptMin < slotEndMin;
+            });
             const occupiedAppointments = appointments.filter((item) => {
               const appointmentStart = new Date(item.start_time).getTime();
               const appointmentEnd = new Date(item.end_time).getTime();
@@ -1076,6 +1114,7 @@ function CompactCalendar({
                 className={`timeline-row group ${canBlock ? "timeline-free" : ""} ${
                   isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""
                 }`}
+                style={{ minHeight: `${ROW_HEIGHT}px` }}
                 key={time}
                 role={canBlock ? "button" : undefined}
                 tabIndex={canBlock ? 0 : undefined}
@@ -1097,18 +1136,19 @@ function CompactCalendar({
                       Math.round(
                         (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) /
                           60000,
-                      ) || 30;
+                      ) || SLOT_STEP_MINUTES;
+                    const isBlock = appointment.booked_by === "block";
 
                     return (
                       <button
-                        className={`timeline-event ${appointment.booked_by === "block" ? "timeline-block" : ""}`}
+                        className={`timeline-event ${isBlock ? "timeline-block" : ""}`}
                         style={
                           {
                             "--event-color": resource?.color || "var(--color-accent)",
                           } as React.CSSProperties
                         }
                         key={appointment.id}
-                        aria-label={`RDV ${appointment.booked_by === "block" ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${time}`}
+                        aria-label={`RDV ${isBlock ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${formatTime(appointment.start_time)}`}
                         onClick={(event) => {
                           event.stopPropagation();
                           onOccupied(appointment.id);
@@ -1116,12 +1156,12 @@ function CompactCalendar({
                       >
                         <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                           {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
-                          {appointment.booked_by === "block"
+                          {isBlock
                             ? appointment.block_label || "Indisponible"
                             : appointment.customer?.name || "Client"}
                         </strong>
                         <span>
-                          {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
+                          {formatTime(appointment.start_time)} · {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
                         </span>
                       </button>
                     );

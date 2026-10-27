@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import Logo from "@/app/components/Logo";
 import Link from "next/link";
+import { SLOT_STEP_MINUTES } from "@/lib/constants";
 
 type Service = {
   id: string;
@@ -297,6 +298,8 @@ export default function BookingForm({ businessId }: { businessId: string }) {
       if (!slot.slot_start) continue;
       if (today && new Date(slot.slot_start).getTime() < Date.now()) continue;
       const label = formatTime(slot.slot_start);
+      const minutesPart = parseInt(label.slice(3, 5), 10);
+      if (Number.isNaN(minutesPart) || minutesPart % SLOT_STEP_MINUTES !== 0) continue;
       const list = map.get(label) ?? [];
       if (!list.some((item) => item.resource_id === slot.resource_id))
         list.push(slot);

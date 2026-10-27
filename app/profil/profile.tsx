@@ -6,6 +6,7 @@ import Link from "next/link";
 import Toast from "@/app/components/toast";
 import DashboardShell from "@/app/components/DashboardShell";
 import Icon from "@/app/components/Icon";
+import { SLOT_STEP_MINUTES } from "@/lib/constants";
 
 type Business = {
   id: string;
@@ -55,10 +56,13 @@ const colors = [
   "#8C8172",
   "#6B8A7A",
 ];
-const timeOptions = Array.from({ length: 24 * 4 }, (_, index) => {
-  const minutes = index * 15;
-  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-});
+const timeOptions = Array.from(
+  { length: Math.floor((24 * 60) / SLOT_STEP_MINUTES) },
+  (_, index) => {
+    const minutes = index * SLOT_STEP_MINUTES;
+    return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+  },
+);
 
 export default function Profile({ businessId }: { businessId?: string } = {}) {
   const router = useRouter();
@@ -806,6 +810,11 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                             )
                           }
                         >
+                          {!timeOptions.includes(hour.open_time.slice(0, 5)) && (
+                            <option value={hour.open_time.slice(0, 5)}>
+                              {hour.open_time.slice(0, 5)}
+                            </option>
+                          )}
                           {timeOptions.map((option) => (
                             <option key={`open-${option}`} value={option}>
                               {option}
@@ -826,6 +835,11 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                             )
                           }
                         >
+                          {!timeOptions.includes(hour.close_time.slice(0, 5)) && (
+                            <option value={hour.close_time.slice(0, 5)}>
+                              {hour.close_time.slice(0, 5)}
+                            </option>
+                          )}
                           {timeOptions.map((option) => (
                             <option key={`close-${option}`} value={option}>
                               {option}

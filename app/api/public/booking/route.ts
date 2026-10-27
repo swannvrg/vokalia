@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase";
 import { isWithinOpeningHours } from "@/lib/business-hours";
 import { normalizeFrenchPhone } from "@/lib/format-phone";
+import { SLOT_STEP_MINUTES } from "@/lib/constants";
 
 const parisDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
 
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
           p_party_size: "1",
           p_search_from: `${date}T00:00:00${parisOffset(date, "00:00")}`,
           p_search_days: 1,
-          p_slot_increment_minutes: 15,
+          p_slot_increment_minutes: SLOT_STEP_MINUTES,
           p_max_results: 300,
         }),
       ));

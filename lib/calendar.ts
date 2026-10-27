@@ -1,4 +1,5 @@
 import type { Appointment, CalendarData, Resource, Service } from "@/lib/types";
+import { SLOT_STEP_MINUTES } from "@/lib/constants";
 
 const PARIS_DATE = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Paris",
@@ -72,7 +73,7 @@ export async function getCalendarData(
           p_party_size: "1",
           p_search_from: `${date}T00:00:00Z`,
           p_search_days: 2,
-          p_slot_increment_minutes: 15,
+          p_slot_increment_minutes: SLOT_STEP_MINUTES,
           p_max_results: 500,
         });
         if (error) throw error;
