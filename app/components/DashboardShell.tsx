@@ -42,8 +42,10 @@ export default function DashboardShell({
   }, [pathname]);
 
   const isProfile = pathname?.includes("/profil");
+  const isQrCode = pathname?.includes("/qr-code");
   const calendarHref = businessId ? `/${businessId}/calendrier` : (isAdmin ? "/admin" : "/calendrier");
   const profileHref = businessId ? `/${businessId}/profil` : "/profil";
+  const qrCodeHref = businessId ? `/${businessId}/qr-code` : "/qr-code";
   const showNavLinks = !isAdmin || businessId;
 
   return (
@@ -89,9 +91,9 @@ export default function DashboardShell({
             <>
               <Link
                 href={calendarHref}
-                className={`button ${!isProfile ? "" : "ghost"}`}
-                style={!isProfile ? { borderColor: "var(--color-border)", background: "transparent", color: "var(--color-text)" } : {}}
-                aria-current={!isProfile ? "page" : undefined}
+                className={`button ${!isProfile && !isQrCode ? "" : "ghost"}`}
+                style={!isProfile && !isQrCode ? { borderColor: "var(--color-border)", background: "transparent", color: "var(--color-text)" } : {}}
+                aria-current={!isProfile && !isQrCode ? "page" : undefined}
               >
                 Calendrier
               </Link>
@@ -102,6 +104,14 @@ export default function DashboardShell({
                 aria-current={isProfile ? "page" : undefined}
               >
                 Profil
+              </Link>
+              <Link
+                href={qrCodeHref}
+                className={`button ${isQrCode ? "" : "ghost"}`}
+                style={isQrCode ? { borderColor: "var(--color-border)", background: "transparent", color: "var(--color-text)" } : {}}
+                aria-current={isQrCode ? "page" : undefined}
+              >
+                QR code
               </Link>
             </>
           )}
@@ -166,6 +176,19 @@ export default function DashboardShell({
                 >
                   <Icon name="settings" size={20} />
                   <span>Profil</span>
+                </Link>
+                <Link
+                  href={qrCodeHref}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium min-h-[44px] transition-colors ${
+                    isQrCode
+                      ? "bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] text-[var(--color-accent)] border border-[var(--color-accent)]"
+                      : "text-[var(--color-text-dim)] hover:bg-[var(--color-bg-subtle)]"
+                  }`}
+                  aria-current={isQrCode ? "page" : undefined}
+                >
+                  <Icon name="qr" size={20} />
+                  <span>QR code</span>
                 </Link>
                 {businessId && (
                   <a

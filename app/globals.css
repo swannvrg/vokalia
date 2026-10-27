@@ -1840,3 +1840,210 @@ input[type="color"].input {
   font-size: 0.8rem;
   border-radius: 8px;
 }
+
+.vp-salons .vp-section-title {
+  margin-bottom: 24px;
+}
+
+.vp-salons-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vp-salon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.vp-salon-card:hover,
+.vp-salon-card:focus-visible {
+  border-color: #bd5b39;
+}
+
+.vp-salon-card-cta {
+  margin-top: auto;
+  padding-top: 8px;
+  color: #bd5b39;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   AFFICHE A4 VITRINE — RÈGLES D'IMPRESSION (@media print)
+   ============================================================ */
+@media screen {
+  .a4-print-sheet {
+    display: none !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #15120F !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Masquer tous les éléments du dashboard et d'interface écran */
+  .no-print,
+  .dashboard-topbar,
+  .dashboard-mobile-actions,
+  .dashboard-mobile-menu,
+  .topbar,
+  .toolbar,
+  header,
+  footer,
+  nav,
+  .panel {
+    display: none !important;
+  }
+
+  .shell {
+    min-height: auto !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Structure exacte de la feuille A4 (210mm x 297mm) */
+  .a4-print-sheet {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
+    margin: 0 auto !important;
+    padding: 24mm 22mm 18mm !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    color: #15120F !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    --color-bg: #ffffff;
+  }
+
+  .a4-print-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-bottom: 8mm;
+    border-bottom: 1px solid #E6E0D6;
+  }
+
+  .a4-print-brand {
+    font-family: var(--font-display), Georgia, serif;
+    font-size: 20pt;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #15120F;
+  }
+
+  .a4-print-body {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: auto 0;
+  }
+
+  .a4-print-salon-name {
+    font-family: var(--font-display), Georgia, serif;
+    font-size: 32pt;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: #15120F;
+    max-width: 90%;
+  }
+
+  .a4-print-catchphrase {
+    font-family: var(--font-display), Georgia, serif;
+    font-size: 22pt;
+    font-weight: 500;
+    line-height: 1.25;
+    color: #BD5B39;
+    margin-top: 5mm;
+  }
+
+  .a4-print-qr-frame {
+    margin: 9mm 0 7mm;
+    padding: 5mm;
+    background: #ffffff;
+    border: 2px solid #E6E0D6;
+    border-radius: 6mm;
+    width: 68mm;
+    height: 68mm;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .a4-print-qr-frame svg,
+  .a4-print-qr-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .a4-print-scan-instruction {
+    font-family: var(--font-body), sans-serif;
+    font-size: 14pt;
+    font-weight: 600;
+    color: #15120F;
+    letter-spacing: -0.01em;
+  }
+
+  .a4-print-url {
+    font-family: var(--font-body), sans-serif;
+    font-size: 11pt;
+    font-weight: 500;
+    color: #665E55;
+    margin-top: 3mm;
+    letter-spacing: 0.02em;
+    word-break: break-all;
+  }
+
+  .a4-print-footer {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 6mm;
+    border-top: 1px solid #E6E0D6;
+    font-family: var(--font-body), sans-serif;
+    font-size: 10pt;
+    color: #8C8172;
+  }
+}

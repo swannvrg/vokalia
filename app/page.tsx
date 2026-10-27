@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Logo from "@/app/components/Logo";
 import MobilePublicNav from "@/app/components/MobilePublicNav";
 import PublicFooter from "@/app/components/PublicFooter";
+import SalonsList from "@/app/components/SalonsList";
+
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Vokalia — Agent vocal IA et réservation en ligne pour commerçants",
@@ -15,8 +19,6 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
 };
-
-import Logo from "@/app/components/Logo";
 
 export default function HomePage() {
   return (
@@ -38,7 +40,7 @@ export default function HomePage() {
             Demander une invitation
           </Link>
         </nav>
-        
+
         {/* Menu Mobile */}
         <MobilePublicNav />
       </header>
@@ -67,6 +69,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ============ SALONS SUR VOKALIA ============ */}
+        <SalonsList />
 
         {/* ============ DEUX FAÇONS DE RÉSERVER ============ */}
         <section className="vp-section vp-two-ways" aria-labelledby="deux-fa-ons">

@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Toast from "@/app/components/toast";
 import DashboardShell from "@/app/components/DashboardShell";
 import Icon from "@/app/components/Icon";
@@ -626,6 +627,33 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
           <p>Coordonnées, horaires et équipe.</p>
         </div>
       </div>
+
+      {/* Raccourci QR Code & Affiche vitrine */}
+      {effectiveBusinessId && (
+        <div className="panel mb-4 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[var(--color-bg-panel-2)] border-[var(--color-border)]">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-[var(--color-bg-panel)] border border-[var(--color-border)] text-[var(--color-accent)] shrink-0">
+              <Icon name="qr" size={22} />
+            </div>
+            <div>
+              <div className="font-semibold text-sm text-[var(--color-text)]">
+                QR Code &amp; Affiche vitrine
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)] m-0">
+                Téléchargez votre QR code ou imprimez votre affiche A4 prête à l&apos;emploi.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/${effectiveBusinessId}/qr-code`}
+            className="button ghost text-xs flex items-center justify-center gap-2 shrink-0 border border-[var(--color-border)] hover:border-[var(--color-accent)]"
+            style={{ textDecoration: "none" }}
+          >
+            <span>Voir mon QR code &amp; affiche</span>
+            <Icon name="chevron-right" size={14} />
+          </Link>
+        </div>
+      )}
 
       {/* 1. Informations du salon */}
       <section className="panel mb-4">
