@@ -31,12 +31,64 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const { data: appointment, error: appointmentError } = await supabase
       .from("appointments")
-      .select("id, business_id, resource_id, service_id, start_time, end_time, party_size, status, booked_by")
+      .select("id, business_id, resource_id, service_id, customer_id, start_time, end_time, party_size, status, booked_by, block_label")
       .eq("id", id)
       .eq("business_id", businessId)
       .single();
     if (appointmentError) throw appointmentError;
-    if (appointment.status !== "confirmed" || appointment.booked_by === "block" || !appointment.resource_id) {
+    if (appointment.status !== "confirmed") {
+      return Response.json({ error: "Ce créneau n'est pas actif." }, { status: 400 });
+    }
+
+    // Gestion de la modification d'un blocage manuel
+    if (appointment.booked_by === "block") {
+      const resourceId = String(body.resourceId ?? appointment.resource_id ?? "");
+      const durationMinutes = Number(body.durationMinutes ?? 30);
+      if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+        return Response.json({ error: "Durée invalide." }, { status: 400 });
+      }
+      const start = new Date(String(body.startTime ?? appointment.start_time));
+      if (Number.isNaN(start.getTime())) {
+        return Response.json({ error: "Date ou heure invalide." }, { status: 400 });
+      }
+      const end = new Date(start.getTime() + durationMinutes * 60_000);
+
+      if (!(await isWithinOpeningHours(supabase, appointment.business_id, start, durationMinutes))) {
+        return Response.json({ error: "Ce blocage est en dehors des heures d'ouverture du salon." }, { status: 400 });
+      }
+
+      const { data: overlaps, error: overlapError } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("resource_id", resourceId)
+        .eq("business_id", businessId)
+        .eq("status", "confirmed")
+        .neq("id", id)
+        .lt("start_time", end.toISOString())
+        .gt("end_time", start.toISOString());
+      if (overlapError) throw overlapError;
+      if (overlaps && overlaps.length > 0) {
+        return Response.json({ error: "Ce créneau est déjà occupé par un autre rendez-vous." }, { status: 409 });
+      }
+
+      const { data, error } = await supabase
+        .from("appointments")
+        .update({
+          resource_id: resourceId,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          block_label: body.label !== undefined ? (String(body.label).trim() || null) : appointment.block_label,
+        })
+        .eq("id", id)
+        .eq("business_id", businessId)
+        .select("id, resource_id, start_time, end_time, block_label")
+        .single();
+      if (error) throw error;
+      return Response.json(data);
+    }
+
+    // Gestion de la modification d'un rendez-vous client
+    if (!appointment.resource_id) {
       return Response.json({ error: "Ce rendez-vous ne peut pas être modifié." }, { status: 400 });
     }
 
@@ -51,7 +103,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       .single();
     if (serviceError || !service) return Response.json({ error: "Prestation introuvable ou inactive." }, { status: 400 });
 
-    const start = new Date(String(body.startTime));
+    const start = new Date(String(body.startTime ?? appointment.start_time));
     if (Number.isNaN(start.getTime())) return Response.json({ error: "Heure invalide." }, { status: 400 });
     const end = new Date(start.getTime() + Number(service.duration_minutes) * 60_000);
     if (!(await isWithinOpeningHours(supabase, appointment.business_id, start, service.duration_minutes))) {
@@ -71,6 +123,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       .from("appointments")
       .select("id, party_size")
       .eq("resource_id", resourceId)
+      .eq("business_id", businessId)
       .eq("status", "confirmed")
       .neq("id", id)
       .lt("start_time", end.toISOString())
@@ -79,6 +132,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const bookedCapacity = (overlaps ?? []).reduce((total, item) => total + (item.party_size ?? 1), 0);
     if (bookedCapacity + (appointment.party_size ?? 1) > resource.capacity) {
       return Response.json({ error: "Ce créneau n'est plus disponible pour ce Coiffeur." }, { status: 409 });
+    }
+
+    // Mise à jour éventuelle des coordonnées client
+    if (appointment.customer_id && (body.customerName !== undefined || body.customerPhone !== undefined)) {
+      const updates: Record<string, string> = {};
+      if (body.customerName !== undefined) updates.name = String(body.customerName).trim();
+      if (body.customerPhone !== undefined) updates.phone_number = String(body.customerPhone).trim();
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("customers").update(updates).eq("id", appointment.customer_id);
+      }
     }
 
     const { data, error } = await supabase
@@ -105,8 +168,26 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       url.searchParams.get("businessId"),
     );
     const { id } = await context.params;
-    const { data: appointment } = await supabase.from("appointments").select("id").eq("id", id).eq("business_id", businessId).maybeSingle();
-    if (!appointment) return Response.json({ error: "Ce rendez-vous est introuvable." }, { status: 404 });
+    const { data: appointment } = await supabase
+      .from("appointments")
+      .select("id, booked_by")
+      .eq("id", id)
+      .eq("business_id", businessId)
+      .maybeSingle();
+    if (!appointment) return Response.json({ error: "Ce créneau est introuvable." }, { status: 404 });
+
+    // Si blocage manuel : annuler directement sans RPC client
+    if (appointment.booked_by === "block") {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", id)
+        .eq("business_id", businessId);
+      if (error) throw error;
+      return Response.json({ ok: true });
+    }
+
+    // Si rendez-vous client : annuler via RPC avec gestion des rappels
     const { data, error } = await supabase.rpc("cancel_appointment", {
       p_appointment_id: id,
       p_business_id: businessId,

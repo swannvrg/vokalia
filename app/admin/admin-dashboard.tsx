@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import DashboardShell from "@/app/components/DashboardShell";
+import { usePageReady } from "@/app/components/PageTransitionProvider";
 
 type RequestItem = { id: string; salon_name: string; contact_name: string; email: string; phone: string | null; message: string | null; status: string; created_at: string; business_id: string | null };
 type Business = { id: string; name: string; status: string; app_user_id: string | null };
 
 export default function AdminDashboard({ initialRequests, businesses }: { initialRequests: RequestItem[]; businesses: Business[] }) {
   const router = useRouter();
+  usePageReady(true);
   const [requests, setRequests] = useState(initialRequests);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<{ text: string; url?: string } | null>(null);

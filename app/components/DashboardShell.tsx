@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useTransitionRouter } from "@/app/components/PageTransitionProvider";
 import Link from "next/link";
 import Logo from "@/app/components/Logo";
 import Icon from "@/app/components/Icon";
@@ -17,7 +18,7 @@ export default function DashboardShell({
   isAdmin?: boolean;
   onAddAppointment?: () => void;
 }) {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 

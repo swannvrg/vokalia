@@ -1,12 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "@/app/components/PageTransitionProvider";
 import Toast from "@/app/components/toast";
 import Logo from "@/app/components/Logo";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

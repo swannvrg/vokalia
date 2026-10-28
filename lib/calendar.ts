@@ -40,7 +40,7 @@ export async function getCalendarData(
       supabase.from("services").select("id, name, duration_minutes").eq("business_id", businessId).eq("active", true).order("name"),
       supabase
         .from("appointments")
-        .select("id, resource_id, service_id, customer_id, start_time, end_time, status, booked_by, block_label, customer:customers(name), service:services(name), resource:resources(name, color)")
+        .select("id, resource_id, service_id, customer_id, start_time, end_time, status, booked_by, block_label, customer:customers(name, phone_number), service:services(name, duration_minutes, price), resource:resources(name, color)")
         .eq("business_id", businessId)
         .gte("start_time", `${date}T00:00:00Z`)
         .lt("start_time", `${date}T23:59:59Z`),

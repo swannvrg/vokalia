@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTransitionRouter, usePageReady } from "@/app/components/PageTransitionProvider";
 import Link from "next/link";
 import Toast from "@/app/components/toast";
 import DashboardShell from "@/app/components/DashboardShell";
@@ -65,7 +65,8 @@ const timeOptions = Array.from(
 );
 
 export default function Profile({ businessId }: { businessId?: string } = {}) {
-  const router = useRouter();
+  const router = useTransitionRouter();
+  const signalReady = usePageReady();
 
   // Saved / initial state
   const [initialBusiness, setInitialBusiness] = useState<Business | null>(null);
@@ -161,7 +162,8 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
         setInitialServices(servicesData);
       }
     });
-  }, [businessId, router]);
+    signalReady();
+  }, [businessId, router, signalReady]);
 
   useEffect(() => {
     void load();

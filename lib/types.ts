@@ -26,8 +26,8 @@ export type Appointment = {
   status: string;
   booked_by: string;
   block_label: string | null;
-  customer: { name: string | null } | null;
-  service: { name: string } | null;
+  customer: { name: string | null; phone_number?: string | null; phone?: string | null } | null;
+  service: { name: string; duration_minutes?: number; price?: number | null } | null;
   resource: { name: string; color: string } | null;
 };
 

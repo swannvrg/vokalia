@@ -2046,4 +2046,211 @@ input[type="color"].input {
     font-size: 10pt;
     color: #8C8172;
   }
-}
+}
+
+/* Page Transition Loader & Animated Logo
+   ============================================================ */
+.page-loader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: #15120F;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  transition: opacity 250ms ease-out;
+}
+
+.page-loader-overlay.is-fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.page-loader-svg {
+  width: 104px;
+  height: 104px;
+}
+
+.page-loader-bar {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pageLoaderWave 1.1s ease-in-out infinite;
+}
+
+.page-loader-bar:nth-of-type(1) {
+  animation-delay: 0s;
+}
+
+.page-loader-bar:nth-of-type(2) {
+  animation-delay: 0.18s;
+}
+
+.page-loader-bar:nth-of-type(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes pageLoaderWave {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.page-loader-bubble {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pageLoaderBreathe 2.2s ease-in-out infinite;
+}
+
+@keyframes pageLoaderBreathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+.page-loader-word {
+  font-family: var(--font-display), 'Fraunces', Georgia, serif;
+  font-weight: 560;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+  color: #F2ECE1;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.page-loader-word span {
+  color: #8C8172;
+  font-size: 14px;
+  display: block;
+  text-align: center;
+  font-family: var(--font-body), 'Hanken Grotesk', sans-serif;
+  font-weight: 400;
+  margin-top: 6px;
+  letter-spacing: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-loader-bar {
+    animation: none;
+    transform: scaleY(0.65);
+  }
+  .page-loader-bubble {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   Calendar Modal & Segmented Control
+   ============================================================ */
+.segmented-control {
+  display: flex;
+  background: var(--color-bg-panel-2);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 4px;
+  margin: 1.25rem 0 1rem;
+}
+
+.segmented-control-btn {
+  flex: 1;
+  padding: 0.55rem 0.8rem;
+  border-radius: 9px;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.segmented-control-btn:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.segmented-control-btn.active {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  box-shadow: 0 2px 8px rgba(189, 91, 57, 0.35);
+}
+
+.appointment-detail-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--color-bg-panel-2);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  margin: 1.25rem 0;
+}
+
+.appointment-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.appointment-detail-item b {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.appointment-detail-item span,
+.appointment-detail-item a {
+  font-size: 0.95rem;
+  color: var(--color-text);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.appointment-detail-item a {
+  color: var(--color-accent-soft);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.appointment-detail-item a:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent-soft);
+}
+
+.source-badge.phone {
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
+}
+
+
+

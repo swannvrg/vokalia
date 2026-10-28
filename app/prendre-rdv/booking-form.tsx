@@ -4,6 +4,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import Logo from "@/app/components/Logo";
 import Link from "next/link";
 import { SLOT_STEP_MINUTES } from "@/lib/constants";
+import { usePageReady } from "@/app/components/PageTransitionProvider";
 
 type Service = {
   id: string;
@@ -78,11 +79,11 @@ const formatPrice = (price: number | null) =>
   price == null
     ? ""
     : new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "EUR",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }).format(price);
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(price);
 
 function dateChipParts(value: string, index: number) {
   const d = new Date(`${value}T12:00:00Z`);
@@ -184,7 +185,7 @@ const DAY_NAMES = [
 function Icon({ name, size = 16 }: { name: "back" | "next" | "phone" | "pin"; size?: number }) {
   const shapes = {
     back: <path d="M15 5l-7 7 7 7" />,
-        next: <path d="M9 5l7 7-7 7" />,
+    next: <path d="M9 5l7 7-7 7" />,
     phone: (
       <path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />
     ),
@@ -213,6 +214,7 @@ function Icon({ name, size = 16 }: { name: "back" | "next" | "phone" | "pin"; si
 }
 
 export default function BookingForm({ businessId }: { businessId: string }) {
+  const signalReady = usePageReady();
   const [date, setDate] = useState(parisDate);
   const [serviceId, setServiceId] = useState("");
   const [resourceId, setResourceId] = useState("");
@@ -227,7 +229,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const confirmationRef = useRef<HTMLDivElement>(null);
   const initialised = useRef(false);
-    const datesRef = useRef<HTMLDivElement>(null);
+  const datesRef = useRef<HTMLDivElement>(null);
   const [arrows, setArrows] = useState({ prev: false, next: true });
 
   function updateArrows() {
@@ -273,12 +275,14 @@ export default function BookingForm({ businessId }: { businessId: string }) {
           }
         }
         setLoading(false);
+        signalReady();
       })
       .catch(() => {
         setError("Impossible de charger les disponibilités.");
         setLoading(false);
+        signalReady();
       });
-  }, [businessId, date, serviceId, resourceId, refreshNonce]);
+  }, [businessId, date, serviceId, resourceId, refreshNonce, signalReady]);
 
   useEffect(() => {
     if (!confirmation) return;
@@ -334,12 +338,12 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   );
   const serviceLine = selectedService
     ? [
-        selectedService.name,
-        `${selectedService.duration_minutes} min`,
-        formatPrice(selectedService.price),
-      ]
-        .filter(Boolean)
-        .join(" · ")
+      selectedService.name,
+      `${selectedService.duration_minutes} min`,
+      formatPrice(selectedService.price),
+    ]
+      .filter(Boolean)
+      .join(" · ")
     : "";
   const whenLine = selectedSlot
     ? `${formatLongDate(date)} à ${formatTime(selectedSlot.slot_start)} avec ${selectedSlot.resource_name}`
@@ -409,7 +413,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   const salonPhone = data?.business.real_phone_number;
 
   const salonHref = businessId ? `/${businessId}/profil-public` : "/";
-    const monthLabel = new Intl.DateTimeFormat("fr-FR", {
+  const monthLabel = new Intl.DateTimeFormat("fr-FR", {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
@@ -427,379 +431,381 @@ export default function BookingForm({ businessId }: { businessId: string }) {
     };
   });
 
+  if (!data && !error) {
+    return null;
+  }
+
   return (
-        <>
-    <nav className="bk-nav" aria-label="Navigation">
-      <div className="bk-nav-inner">
-        <Link href={salonHref} className="bk-back">
-          <Icon name="back" size={18} />
-          <span>Fiche du salon</span>
-        </Link>
-        {salonPhone && (
-          <a className="bk-nav-call" href={`tel:${salonPhone.replace(/\s/g, "")}`}>
-            <Icon name="phone" size={16} />
-            <span>Appeler</span>
-          </a>
-        )}
-      </div>
-    </nav>
-    <main className="bk-page">
-      <div className="bk-layout">
-      <aside className="bk-aside" aria-label="Informations du salon">
-        <div className="bk-aside-card">
-          <div className="bk-aside-brand">
-            <Logo size={36} />
-            <div>
-              <p className="kicker">Réservation en ligne</p>
-              <h2>{data?.business.name || "Vokalia"}</h2>
-            </div>
-          </div>
-          {data?.business.address && (
-            <p className="bk-aside-line">
-              <Icon name="pin" />
-              {data.business.address}
-            </p>
-          )}
+    <>
+      <nav className="bk-nav" aria-label="Navigation">
+        <div className="bk-nav-inner">
+          <Link href={salonHref} className="bk-back">
+            <Icon name="back" size={18} />
+            <span>Fiche du salon</span>
+          </Link>
           {salonPhone && (
-            <p className="bk-aside-line">
-              <Icon name="phone" />
-              <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>{salonPhone}</a>
-            </p>
+            <a className="bk-nav-call" href={`tel:${salonPhone.replace(/\s/g, "")}`}>
+              <Icon name="phone" size={16} />
+              <span>Appeler</span>
+            </a>
           )}
         </div>
-        <div className="bk-aside-card">
-          <h3>Horaires</h3>
-          <ul className="bk-hours">
-            {hoursRows.map((row, index) => (
-              <li key={row.label} className={index === todayIndex ? "today" : ""}>
-                <span>{row.label}</span>
-                <span>{row.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        {(data?.resources.length ?? 0) > 0 && (
-          <div className="bk-aside-card">
-            <h3>L’équipe</h3>
-            <div className="bk-team">
-              {data?.resources.map((resource) => (
-                <span className="bk-team-chip" key={resource.id}>
-                  <i style={{ backgroundColor: resource.color }} />
-                  {resource.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="bk-aside-card">
-          <h3>Votre sélection</h3>
-          {selectedService ? (
-            <>
-              <p className="bk-aside-strong">{serviceLine}</p>
-              {selectedSlot ? (
-                <p className="bk-muted">{whenLine}</p>
-              ) : (
-                <p className="bk-muted">Choisissez un créneau.</p>
+      </nav>
+      <main className="bk-page">
+        <div className="bk-layout">
+          <aside className="bk-aside" aria-label="Informations du salon">
+            <div className="bk-aside-card">
+              <div className="bk-aside-brand">
+                <Logo size={36} />
+                <div>
+                  <p className="kicker">Réservation en ligne</p>
+                  <h2>{data?.business.name || "Vokalia"}</h2>
+                </div>
+              </div>
+              {data?.business.address && (
+                <p className="bk-aside-line">
+                  <Icon name="pin" />
+                  {data.business.address}
+                </p>
               )}
-            </>
-          ) : (
-            <p className="bk-muted">Rien de sélectionné pour l’instant.</p>
-          )}
-        </div>
-        <Link href={salonHref} className="button">
-          Voir la fiche du salon
-        </Link>
-      </aside>
-      <div className="bk-card">
-        <header className="bk-brand">
-          <Logo size={32} />
-          <div>
-            <p className="kicker">Réservation en ligne</p>
-            <h1>{data?.business.name || "Vokalia"}</h1>
-          </div>
-        </header>
-
-        {data?.business.address && (
-          <p className="bk-meta">
-            {data.business.address}
-            {salonPhone && (
-              <>
-                {" · "}
-                <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>
-                  {salonPhone}
-                </a>
-              </>
-            )}
-          </p>
-        )}
-
-        {confirmation ? (
-          <div
-            className="bk-confirm"
-            ref={confirmationRef}
-            tabIndex={-1}
-            aria-live="polite"
-          >
-            <div className="bk-confirm-check">
-              <CheckIcon size={28} />
+              {salonPhone && (
+                <p className="bk-aside-line">
+                  <Icon name="phone" />
+                  <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>{salonPhone}</a>
+                </p>
+              )}
             </div>
-            <p className="kicker">Rendez-vous confirmé</p>
-            <h2>À bientôt, {confirmation.customerName} !</h2>
-            <p>
-              {[
-                confirmation.service.name,
-                `${confirmation.service.duration_minutes} min`,
-                formatPrice(confirmation.service.price),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <p>
-              {formatLongDate(confirmation.date)} à{" "}
-              {formatTime(confirmation.slot.slot_start)} avec{" "}
-              {confirmation.slot.resource_name}
-            </p>
-            <p>
-              {confirmation.salonName}
-              {confirmation.address ? `, ${confirmation.address}` : ""}
-            </p>
-            {confirmation.salonPhone && (
-              <p>
-                Téléphone du salon :{" "}
-                <a href={`tel:${confirmation.salonPhone.replace(/\s/g, "")}`}>
-                  {confirmation.salonPhone}
-                </a>
+            <div className="bk-aside-card">
+              <h3>Horaires</h3>
+              <ul className="bk-hours">
+                {hoursRows.map((row, index) => (
+                  <li key={row.label} className={index === todayIndex ? "today" : ""}>
+                    <span>{row.label}</span>
+                    <span>{row.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {(data?.resources.length ?? 0) > 0 && (
+              <div className="bk-aside-card">
+                <h3>L’équipe</h3>
+                <div className="bk-team">
+                  {data?.resources.map((resource) => (
+                    <span className="bk-team-chip" key={resource.id}>
+                      <i style={{ backgroundColor: resource.color }} />
+                      {resource.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="bk-aside-card">
+              <h3>Votre sélection</h3>
+              {selectedService ? (
+                <>
+                  <p className="bk-aside-strong">{serviceLine}</p>
+                  {selectedSlot ? (
+                    <p className="bk-muted">{whenLine}</p>
+                  ) : (
+                    <p className="bk-muted">Choisissez un créneau.</p>
+                  )}
+                </>
+              ) : (
+                <p className="bk-muted">Rien de sélectionné pour l’instant.</p>
+              )}
+            </div>
+
+          </aside>
+          <div className="bk-card">
+            <header className="bk-brand">
+              <Logo size={32} />
+              <div>
+                <p className="kicker">Réservation en ligne</p>
+                <h1>{data?.business.name || "Vokalia"}</h1>
+              </div>
+            </header>
+
+            {data?.business.address && (
+              <p className="bk-meta">
+                {data.business.address}
+                {salonPhone && (
+                  <>
+                    {" · "}
+                    <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>
+                      {salonPhone}
+                    </a>
+                  </>
+                )}
               </p>
             )}
-            
-          </div>
-        ) : (
-          <form onSubmit={submit} noValidate>
-                        <section className="bk-section">
-              <span className="bk-label" id="bk-date-label">
-                Date · {monthLabel}
-              </span>
-              <div className="bk-dates-wrap">
-                <button
-                  type="button"
-                  className="bk-arrow"
-                  aria-label="Dates précédentes"
-                  disabled={!arrows.prev}
-                  onClick={() => scrollDates(-1)}
-                >
-                  <Icon name="back" size={18} />
-                </button>
-                <div
-                  className="bk-dates"
-                  ref={datesRef}
-                  onScroll={updateArrows}
-                  role="group"
-                  aria-labelledby="bk-date-label"
-                >
-                  {dateOptions.map((option, index) => {
-                    const closed = isClosedDay(option, data?.businessHours);
-                    const { top, day } = dateChipParts(option, index);
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        className={`bk-date ${date === option ? "selected" : ""}`}
-                        aria-pressed={date === option}
-                        aria-label={formatLongDate(option)}
-                        disabled={closed}
-                        onClick={() => {
-                          setDate(option);
+
+            {confirmation ? (
+              <div
+                className="bk-confirm"
+                ref={confirmationRef}
+                tabIndex={-1}
+                aria-live="polite"
+              >
+                <div className="bk-confirm-check">
+                  <CheckIcon size={28} />
+                </div>
+                <p className="kicker">Rendez-vous confirmé</p>
+                <h2>À bientôt, {confirmation.customerName} !</h2>
+                <p>
+                  {[
+                    confirmation.service.name,
+                    `${confirmation.service.duration_minutes} min`,
+                    formatPrice(confirmation.service.price),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+                <p>
+                  {formatLongDate(confirmation.date)} à{" "}
+                  {formatTime(confirmation.slot.slot_start)} avec{" "}
+                  {confirmation.slot.resource_name}
+                </p>
+                <p>
+                  {confirmation.salonName}
+                  {confirmation.address ? `, ${confirmation.address}` : ""}
+                </p>
+                {confirmation.salonPhone && (
+                  <p>
+                    Téléphone du salon :{" "}
+                    <a href={`tel:${confirmation.salonPhone.replace(/\s/g, "")}`}>
+                      {confirmation.salonPhone}
+                    </a>
+                  </p>
+                )}
+
+              </div>
+            ) : (
+              <form onSubmit={submit} noValidate>
+                <section className="bk-section">
+                  <span className="bk-label" id="bk-date-label">
+                    Date · {monthLabel}
+                  </span>
+                  <div className="bk-dates-wrap">
+                    <button
+                      type="button"
+                      className="bk-arrow"
+                      aria-label="Dates précédentes"
+                      disabled={!arrows.prev}
+                      onClick={() => scrollDates(-1)}
+                    >
+                      <Icon name="back" size={18} />
+                    </button>
+                    <div
+                      className="bk-dates"
+                      ref={datesRef}
+                      onScroll={updateArrows}
+                      role="group"
+                      aria-labelledby="bk-date-label"
+                    >
+                      {dateOptions.map((option, index) => {
+                        const closed = isClosedDay(option, data?.businessHours);
+                        const { top, day } = dateChipParts(option, index);
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            className={`bk-date ${date === option ? "selected" : ""}`}
+                            aria-pressed={date === option}
+                            aria-label={formatLongDate(option)}
+                            disabled={closed}
+                            onClick={() => {
+                              setDate(option);
+                              setSelectedSlot(null);
+                            }}
+                          >
+                            <small>{top}</small>
+                            <strong>{day}</strong>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      className="bk-arrow"
+                      aria-label="Dates suivantes"
+                      disabled={!arrows.next}
+                      onClick={() => scrollDates(1)}
+                    >
+                      <Icon name="next" size={18} />
+                    </button>
+                  </div>
+                </section>
+
+                <section className="bk-section bk-fields">
+                  <div className="field">
+                    <label htmlFor="booking-service">Prestation</label>
+                    <select
+                      className="select"
+                      id="booking-service"
+                      value={serviceId}
+                      onChange={(event) => {
+                        setServiceId(event.target.value);
+                        setResourceId("");
+                        setSelectedSlot(null);
+                      }}
+                    >
+                      <option value="">Choisir une prestation</option>
+                      {data?.services.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name} · {service.duration_minutes} min
+                          {service.price != null
+                            ? ` · ${formatPrice(service.price)}`
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {(data?.resources.length ?? 0) > 1 && (
+                    <div className="field">
+                      <label htmlFor="booking-resource">Coiffeur</label>
+                      <select
+                        className="select"
+                        id="booking-resource"
+                        value={resourceId}
+                        onChange={(event) => {
+                          setResourceId(event.target.value);
                           setSelectedSlot(null);
                         }}
+                        disabled={!serviceId}
                       >
-                        <small>{top}</small>
-                        <strong>{day}</strong>
-                      </button>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  className="bk-arrow"
-                  aria-label="Dates suivantes"
-                  disabled={!arrows.next}
-                  onClick={() => scrollDates(1)}
-                >
-                  <Icon name="next" size={18} />
-                </button>
-              </div>
-            </section>
-
-            <section className="bk-section bk-fields">
-              <div className="field">
-                <label htmlFor="booking-service">Prestation</label>
-                <select
-                  className="select"
-                  id="booking-service"
-                  value={serviceId}
-                  onChange={(event) => {
-                    setServiceId(event.target.value);
-                    setResourceId("");
-                    setSelectedSlot(null);
-                  }}
-                >
-                  <option value="">Choisir une prestation</option>
-                  {data?.services.map((service) => (
-                    <option key={service.id} value={service.id}>
-                      {service.name} · {service.duration_minutes} min
-                      {service.price != null
-                        ? ` · ${formatPrice(service.price)}`
-                        : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {(data?.resources.length ?? 0) > 1 && (
-                <div className="field">
-                  <label htmlFor="booking-resource">Coiffeur</label>
-                  <select
-                    className="select"
-                    id="booking-resource"
-                    value={resourceId}
-                    onChange={(event) => {
-                      setResourceId(event.target.value);
-                      setSelectedSlot(null);
-                    }}
-                    disabled={!serviceId}
-                  >
-                    <option value="">Tous les coiffeurs</option>
-                    {data?.resources.map((resource) => (
-                      <option key={resource.id} value={resource.id}>
-                        {resource.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </section>
-
-            <section className="bk-section" aria-live="polite">
-              <h2 className="bk-title">Créneaux disponibles</h2>
-              {loading ? (
-                <p className="bk-muted">Recherche en cours…</p>
-              ) : !serviceId ? (
-                <p className="bk-muted">Choisissez d’abord une prestation.</p>
-              ) : periods.length === 0 ? (
-                <p className="bk-muted">
-                  Aucun créneau disponible ce jour-là. Essayez une autre date.
-                </p>
-              ) : (
-                periods.map((period) => (
-                  <div key={period.title}>
-                    <h3 className="bk-period">{period.title}</h3>
-                    <div className={`bk-times ${multi ? "multi" : ""}`}>
-                      {period.items.map(({ label, slots }) =>
-                        multi ? (
-                          <div className="bk-slotcard" key={label}>
-                            <span className="bk-slotcard-time">{label}</span>
-                            <div className="bk-slotcard-choices">
-                              {slots.map((slot) => {
-                                const resource = data?.resources.find(
-                                  (item) => item.id === slot.resource_id,
-                                );
-                                return (
-                                  <button
-                                    key={slot.resource_id}
-                                    type="button"
-                                    className={`bk-who ${isSelected(slot) ? "selected" : ""}`}
-                                    style={
-                                      {
-                                        "--slot-color":
-                                          resource?.color ||
-                                          "var(--color-accent)",
-                                      } as React.CSSProperties
-                                    }
-                                    aria-pressed={isSelected(slot)}
-                                    aria-label={`${label} avec ${slot.resource_name}`}
-                                    onClick={() => setSelectedSlot(slot)}
-                                  >
-                                    {isSelected(slot) && (
-                                      <CheckIcon size={12} />
-                                    )}
-                                    {slot.resource_name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            key={label}
-                            type="button"
-                            className={`bk-time ${isSelected(slots[0]) ? "selected" : ""}`}
-                            aria-pressed={isSelected(slots[0])}
-                            onClick={() => setSelectedSlot(slots[0])}
-                          >
-                            {isSelected(slots[0]) && <CheckIcon size={13} />}
-                            {label}
-                          </button>
-                        ),
-                      )}
+                        <option value="">Tous les coiffeurs</option>
+                        {data?.resources.map((resource) => (
+                          <option key={resource.id} value={resource.id}>
+                            {resource.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+                  )}
+                </section>
+
+                <section className="bk-section" aria-live="polite">
+                  <h2 className="bk-title">Créneaux disponibles</h2>
+                  {loading ? (
+                    <p className="bk-muted">Recherche en cours…</p>
+                  ) : !serviceId ? (
+                    <p className="bk-muted">Choisissez d’abord une prestation.</p>
+                  ) : periods.length === 0 ? (
+                    <p className="bk-muted">
+                      Aucun créneau disponible ce jour-là. Essayez une autre date.
+                    </p>
+                  ) : (
+                    periods.map((period) => (
+                      <div key={period.title}>
+                        <h3 className="bk-period">{period.title}</h3>
+                        <div className={`bk-times ${multi ? "multi" : ""}`}>
+                          {period.items.map(({ label, slots }) =>
+                            multi ? (
+                              <div className="bk-slotcard" key={label}>
+                                <span className="bk-slotcard-time">{label}</span>
+                                <div className="bk-slotcard-choices">
+                                  {slots.map((slot) => {
+                                    const resource = data?.resources.find(
+                                      (item) => item.id === slot.resource_id,
+                                    );
+                                    return (
+                                      <button
+                                        key={slot.resource_id}
+                                        type="button"
+                                        className={`bk-who ${isSelected(slot) ? "selected" : ""}`}
+                                        style={
+                                          {
+                                            "--slot-color":
+                                              resource?.color ||
+                                              "var(--color-accent)",
+                                          } as React.CSSProperties
+                                        }
+                                        aria-pressed={isSelected(slot)}
+                                        aria-label={`${label} avec ${slot.resource_name}`}
+                                        onClick={() => setSelectedSlot(slot)}
+                                      >
+                                        {isSelected(slot) && (
+                                          <CheckIcon size={12} />
+                                        )}
+                                        {slot.resource_name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                key={label}
+                                type="button"
+                                className={`bk-time ${isSelected(slots[0]) ? "selected" : ""}`}
+                                aria-pressed={isSelected(slots[0])}
+                                onClick={() => setSelectedSlot(slots[0])}
+                              >
+                                {isSelected(slots[0]) && <CheckIcon size={13} />}
+                                {label}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </section>
+
+                <section className="bk-section bk-fields">
+                  <div className="field">
+                    <label htmlFor="booking-name">Votre prénom</label>
+                    <input
+                      className="input"
+                      id="booking-name"
+                      autoComplete="given-name"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                    />
                   </div>
-                ))
-              )}
-            </section>
+                  <div className="field">
+                    <label htmlFor="booking-phone">Téléphone</label>
+                    <input
+                      className="input"
+                      id="booking-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="06 12 34 56 78"
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                    />
+                  </div>
+                </section>
 
-            <section className="bk-section bk-fields">
-              <div className="field">
-                <label htmlFor="booking-name">Votre prénom</label>
-                <input
-                  className="input"
-                  id="booking-name"
-                  autoComplete="given-name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="booking-phone">Téléphone</label>
-                <input
-                  className="input"
-                  id="booking-phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder="06 12 34 56 78"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
-              </div>
-            </section>
-
-            <div className="bk-footer">
-              {error && (
-                <div className="error" role="alert">
-                  {error}
+                <div className="bk-footer">
+                  {error && (
+                    <div className="error" role="alert">
+                      {error}
+                    </div>
+                  )}
+                  {selectedSlot ? (
+                    <div className="bk-recap">
+                      <strong>{serviceLine}</strong>
+                      <span>{whenLine}</span>
+                    </div>
+                  ) : null}
+                  {!canSubmit && !booking && (
+                    <p className="bk-hint">{missingMessage}</p>
+                  )}
+                  <button
+                    className="button bk-submit"
+                    type="submit"
+                    disabled={!canSubmit}
+                  >
+                    {booking ? "Confirmation…" : "Confirmer le rendez-vous"}
+                  </button>
                 </div>
-              )}
-              {selectedSlot ? (
-                <div className="bk-recap">
-                  <strong>{serviceLine}</strong>
-                  <span>{whenLine}</span>
-                </div>
-              ) : null}
-              {!canSubmit && !booking && (
-                <p className="bk-hint">{missingMessage}</p>
-              )}
-              <button
-                className="button bk-submit"
-                type="submit"
-                disabled={!canSubmit}
-              >
-                {booking ? "Confirmation…" : "Confirmer le rendez-vous"}
-              </button>
-            </div>
-          </form>
-                )}
-      </div>
-      </div>
-    </main>
+              </form>
+            )}
+          </div>
+        </div>
+      </main>
     </>
   );
 }

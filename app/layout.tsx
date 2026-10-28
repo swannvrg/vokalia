@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
+import PageTransitionProvider from "@/app/components/PageTransitionProvider";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -37,8 +38,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="fr" className={`${fraunces.variable} ${hankenGrotesk.variable}`}>
       <body>
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-[#15120F] focus:text-[#BD5B39]">Aller au contenu</a>
-        {children}
+        <PageTransitionProvider>
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-[#15120F] focus:text-[#BD5B39]">Aller au contenu</a>
+          {children}
+        </PageTransitionProvider>
       </body>
     </html>
   );

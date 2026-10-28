@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         .maybeSingle();
       if (conflict) return Response.json({ error: "Ce créneau est déjà occupé." }, { status: 409 });
 
-      const { error } = await supabase.from("appointments").insert({
+      const { data: newBlock, error } = await supabase.from("appointments").insert({
         business_id: businessId,
         resource_id: body.resourceId,
         start_time: start.toISOString(),
@@ -59,9 +59,9 @@ export async function POST(request: Request) {
         block_label: body.label?.trim() || null,
         customer_id: null,
         service_id: null,
-      });
+      }).select("id").single();
       if (error) throw error;
-      return Response.json({ ok: true });
+      return Response.json({ ok: true, id: newBlock?.id });
     }
 
     if (body.action === "resource") {

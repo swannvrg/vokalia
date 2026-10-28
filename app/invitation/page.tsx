@@ -1,11 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "@/app/components/PageTransitionProvider";
 import Logo from "@/app/components/Logo";
 
 export default function InvitationPage() {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
