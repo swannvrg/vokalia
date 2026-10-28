@@ -8,6 +8,7 @@ import React, {
   useState,
   useRef,
 } from "react";
+import Link from "next/link";
 import type { CalendarData } from "@/lib/types";
 import { SLOT_STEP_MINUTES } from "@/lib/constants";
 import Toast from "@/app/components/toast";
@@ -294,7 +295,25 @@ export default function Calendar({
 
       {!loaded ? (
         <div className="empty">Chargement du calendrier...</div>
-      ) : !data?.resources.length || !data?.services.length ? (
+      ) : !data?.resources.length ? (
+        <div className="panel p-8 text-center flex flex-col items-center justify-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] flex items-center justify-center text-[var(--color-accent)] mb-1">
+            <Icon name="user" size={24} />
+          </div>
+          <h3 className="text-xl font-medium text-[var(--color-text)] m-0">
+            Aucun coiffeur actif
+          </h3>
+          <p className="text-[var(--color-text-muted)] max-w-md m-0">
+            Au moins un coiffeur doit rester actif pour afficher le planning et recevoir des rendez-vous.
+          </p>
+          <Link
+            href={businessId ? `/${businessId}/profil` : "/profil"}
+            className="button primary mt-2 inline-flex items-center gap-2"
+          >
+            <span>Profil &gt; Coiffeurs</span>
+          </Link>
+        </div>
+      ) : !data?.services.length ? (
         <div className="panel p-8 text-center flex flex-col items-center justify-center gap-3">
           <div className="w-12 h-12 rounded-full bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] flex items-center justify-center text-[var(--color-accent)] mb-1">
             <Icon name="settings" size={24} />
@@ -303,10 +322,10 @@ export default function Calendar({
             Configurez votre salon
           </h3>
           <p className="text-[var(--color-text-muted)] max-w-md m-0">
-            Pour commencer à recevoir des rendez-vous, ajoutez au moins un coiffeur et une prestation dans vos réglages.
+            Pour commencer à recevoir des rendez-vous, ajoutez au moins une prestation dans vos réglages.
           </p>
-          <button 
-            className="button primary mt-2" 
+          <button
+            className="button primary mt-2"
             onClick={() => router.push(businessId ? `/${businessId}/profil` : "/profil")}
           >
             Configurer mon salon
@@ -396,8 +415,6 @@ function CompactCalendar({
       (selectedResource === "all" || item.resource_id === selectedResource),
   );
 
-  const isMultiColumn = selectedResource === "all" && resources.length > 1;
-
   return (
     <div className="timeline-wrap">
       {/* Legend */}
@@ -410,350 +427,238 @@ function CompactCalendar({
             </span>
           ))}
         </div>
-        {selectedResource === "all" && (
-          <span className="text-xs text-[var(--color-text-muted)] italic">
-            Cliquez sur un créneau libre pour créer un rendez-vous ou bloquer l&apos;horaire.
-          </span>
-        )}
+        <span className="text-xs text-[var(--color-text-muted)] italic">
+          Cliquez sur un créneau libre pour créer un rendez-vous ou bloquer l&apos;horaire.
+        </span>
       </div>
 
-      {/* Multi-column view for Desktop when "all" is selected */}
-      {isMultiColumn ? (
-        <>
-          {/* Desktop view (>= 768px) */}
-          <div className="hidden md:block overflow-x-auto">
+      {/* Grid view for Desktop (>= 768px, N columns) */}
+      <div className="hidden md:block overflow-x-auto">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `5rem repeat(${resources.length}, minmax(130px, 1fr))`,
+          }}
+        >
+          {/* Sticky column headers */}
+          <div className="sticky top-0 z-10 bg-[var(--color-bg-panel-2)] p-2 text-xs font-semibold text-[var(--color-text-muted)] border-b border-r border-[var(--color-border)] text-center">
+            Heure
+          </div>
+          {resources.map((res) => (
             <div
-              className="grid"
-              style={{
-                gridTemplateColumns: `5rem repeat(${resources.length}, minmax(130px, 1fr))`,
-              }}
+              key={res.id}
+              className="sticky top-0 z-10 bg-[var(--color-bg-panel-2)] p-2 text-xs font-bold text-[var(--color-text)] border-b border-r border-[var(--color-border)] last:border-r-0 flex items-center justify-center gap-1.5"
+              style={{ borderTop: `3px solid ${res.color}` }}
             >
-              {/* Sticky column headers */}
-              <div className="sticky top-0 z-10 bg-[var(--color-bg-panel-2)] p-2 text-xs font-semibold text-[var(--color-text-muted)] border-b border-r border-[var(--color-border)] text-center">
-                Heure
-              </div>
-              {resources.map((res) => (
-                <div
-                  key={res.id}
-                  className="sticky top-0 z-10 bg-[var(--color-bg-panel-2)] p-2 text-xs font-bold text-[var(--color-text)] border-b border-r border-[var(--color-border)] last:border-r-0 flex items-center justify-center gap-1.5"
-                  style={{ borderTop: `3px solid ${res.color}` }}
-                >
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: res.color }} />
-                  <span className="truncate">{res.name}</span>
-                </div>
-              ))}
-
-              {/* Grid content rows */}
-              {times.map((time, timeIndex) => {
-                const isTarget = time === targetTime;
-                const start = parisToISO(data.date, time);
-                const slotStart = new Date(start).getTime();
-                const slotEnd = slotStart + SLOT_STEP_MINUTES * 60_000;
-                const slotStartMin = toMinutes(time);
-                const slotEndMin = slotStartMin + SLOT_STEP_MINUTES;
-
-                return (
-                  <React.Fragment key={time}>
-                    <div
-                      ref={isTarget ? targetRowRef : undefined}
-                      className={`border-b border-r border-[var(--color-border)] p-1.5 text-xs text-[var(--color-text-muted)] flex items-center justify-center font-mono ${
-                        isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] font-bold text-[var(--color-accent)]" : ""
-                      }`}
-                      style={{ height: `${ROW_HEIGHT}px` }}
-                    >
-                      {time}
-                    </div>
-
-                    {resources.map((res) => {
-                      const displayedAppointments = appointments.filter((item) => {
-                        if (item.resource_id !== res.id) return false;
-                        const apptMin = toMinutes(formatTime(item.start_time));
-                        if (timeIndex === 0 && apptMin < slotStartMin) return true;
-                        return apptMin >= slotStartMin && apptMin < slotEndMin;
-                      });
-                      const occupiedAppointments = appointments.filter((item) => {
-                        const appointmentStart = new Date(item.start_time).getTime();
-                        const appointmentEnd = new Date(item.end_time).getTime();
-                        return item.resource_id === res.id && appointmentStart < slotEnd && appointmentEnd > slotStart;
-                      });
-                      const isFree = occupiedAppointments.length === 0;
-
-                      return (
-                        <div
-                          key={res.id}
-                          className={`relative border-b border-r border-[var(--color-border)] last:border-r-0 p-0.5 flex items-center group transition-colors ${
-                            isFree ? "hover:bg-[color-mix(in_srgb,var(--color-accent)_8%,var(--color-bg-panel))] cursor-pointer" : ""
-                          }`}
-                          style={{ height: `${ROW_HEIGHT}px` }}
-                          role={isFree ? "button" : undefined}
-                          tabIndex={isFree ? 0 : undefined}
-                          onClick={(event) => isFree && onFree(res.id, start, event.currentTarget)}
-                          onKeyDown={(event) => {
-                            if (isFree && (event.key === "Enter" || event.key === " ")) {
-                              event.preventDefault();
-                              onFree(res.id, start, event.currentTarget);
-                            }
-                          }}
-                          aria-label={isFree ? `Créneau libre pour ${res.name} à ${time}. Cliquez pour ajouter un RDV ou bloquer.` : undefined}
-                        >
-                          <div className="timeline-appointment-layer" style={{ pointerEvents: "none", width: "100%", height: "100%" }}>
-                            {displayedAppointments.map((appt) => {
-                              const apptMin = toMinutes(formatTime(appt.start_time));
-                              const offsetMin = Math.max(0, apptMin - slotStartMin);
-                              const topPx = (offsetMin / SLOT_STEP_MINUTES) * ROW_HEIGHT + 2;
-                              const durationMin =
-                                Math.round(
-                                  (new Date(appt.end_time).getTime() - new Date(appt.start_time).getTime()) /
-                                    60000,
-                                ) || SLOT_STEP_MINUTES;
-                              const heightPx = Math.max(22, (durationMin / SLOT_STEP_MINUTES) * ROW_HEIGHT - 4);
-                              const isBlock = appt.booked_by === "block";
-
-                              return (
-                                <button
-                                  key={appt.id}
-                                  type="button"
-                                  className="absolute inset-x-0.5 z-10 p-1.5 rounded text-left text-xs transition-all overflow-hidden shadow-xs cursor-pointer border-l-3 pointer-events-auto"
-                                  style={{
-                                    top: `${topPx}px`,
-                                    height: `${heightPx}px`,
-                                    borderLeftColor: res.color,
-                                    backgroundColor: `color-mix(in srgb, ${res.color} 18%, var(--color-bg-panel))`,
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onOccupied(appt.id, e.currentTarget);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      onOccupied(appt.id, e.currentTarget);
-                                    }
-                                  }}
-                                  aria-label={`${isBlock ? "Blocage" : "Rendez-vous"} de ${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} à ${formatTime(appt.start_time)}`}
-                                  title={`${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} · ${formatTime(appt.start_time)} - ${formatTime(appt.end_time)}`}
-                                >
-                                  <div className="font-semibold truncate flex items-center gap-1 text-[var(--color-text)] leading-tight text-[11px]">
-                                    {appt.booked_by === "phone" && <WaveIndicator state="success" />}
-                                    <span className="truncate">{isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"}</span>
-                                  </div>
-                                  {durationMin >= 25 && (
-                                    <div className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight mt-0.5">
-                                      {appt.service?.name || "Blocage"} · {formatTime(appt.start_time)} - {formatTime(appt.end_time)}
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {isFree && (
-                            <span className="opacity-0 group-hover:opacity-100 text-[var(--color-accent)] text-xs font-semibold mx-auto transition-opacity pointer-events-none">
-                              +
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                );
-              })}
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: res.color }} />
+              <span className="truncate">{res.name}</span>
             </div>
-          </div>
+          ))}
 
-          {/* Mobile view (< 768px): single column list */}
-          <div className="block md:hidden">
-            <div className="timeline-head">
-              <span>Heure</span>
-              <span>Rendez-vous et disponibilités</span>
-            </div>
-            {times.map((time, timeIndex) => {
-              const start = parisToISO(data.date, time);
-              const slotStartMin = toMinutes(time);
-              const slotEndMin = slotStartMin + SLOT_STEP_MINUTES;
-              const rowAppointments = appointments.filter((item) => {
-                const apptMin = toMinutes(formatTime(item.start_time));
-                if (timeIndex === 0 && apptMin < slotStartMin) return true;
-                return apptMin >= slotStartMin && apptMin < slotEndMin;
-              });
-              const isTarget = time === targetTime;
-
-              return (
-                <div
-                  ref={isTarget ? targetRowRef : undefined}
-                  className={`timeline-row ${isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""}`}
-                  style={{ minHeight: `${ROW_HEIGHT}px` }}
-                  key={time}
-                >
-                  <time>{time}</time>
-                  <div className="timeline-events">
-                    {rowAppointments.map((appointment) => {
-                      const resource = resources.find(
-                        (item) => item.id === appointment.resource_id,
-                      );
-                      const durationMin =
-                        Math.round(
-                          (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) /
-                            60000,
-                        ) || SLOT_STEP_MINUTES;
-                      const isBlock = appointment.booked_by === "block";
-
-                      return (
-                        <button
-                          type="button"
-                          className={`timeline-event ${isBlock ? "timeline-block" : ""}`}
-                          style={
-                            {
-                              "--event-color": resource?.color || "var(--color-accent)",
-                            } as React.CSSProperties
-                          }
-                          key={appointment.id}
-                          aria-label={`${isBlock ? "Blocage" : "RDV"} ${isBlock ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${formatTime(appointment.start_time)}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onOccupied(appointment.id, event.currentTarget);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              onOccupied(appointment.id, e.currentTarget);
-                            }
-                          }}
-                        >
-                          <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                            {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
-                            {isBlock
-                              ? appointment.block_label || "Indisponible"
-                              : appointment.customer?.name || "Client"}
-                          </strong>
-                          <span>
-                            {formatTime(appointment.start_time)} · {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
-                          </span>
-                        </button>
-                      );
-                    })}
-                    {rowAppointments.length === 0 && (
-                      <button
-                        type="button"
-                        className="timeline-empty-btn text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent)] py-1 px-2 rounded transition-colors"
-                        onClick={(event) => {
-                          onFree(resources[0]?.id || "", start, event.currentTarget);
-                        }}
-                      >
-                        + Créneau libre
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        /* Single column view (filtered by specific resource) */
-        <div>
-          <div className="timeline-head">
-            <span>Heure</span>
-            <span>Rendez-vous et disponibilités</span>
-          </div>
+          {/* Grid content rows */}
           {times.map((time, timeIndex) => {
+            const isTarget = time === targetTime;
             const start = parisToISO(data.date, time);
             const slotStart = new Date(start).getTime();
             const slotEnd = slotStart + SLOT_STEP_MINUTES * 60_000;
             const slotStartMin = toMinutes(time);
             const slotEndMin = slotStartMin + SLOT_STEP_MINUTES;
-            const displayedAppointments = appointments.filter((item) => {
-              if (item.resource_id !== selectedResource) return false;
-              const apptMin = toMinutes(formatTime(item.start_time));
-              if (timeIndex === 0 && apptMin < slotStartMin) return true;
-              return apptMin >= slotStartMin && apptMin < slotEndMin;
-            });
-            const occupiedAppointments = appointments.filter((item) => {
-              const appointmentStart = new Date(item.start_time).getTime();
-              const appointmentEnd = new Date(item.end_time).getTime();
-              return item.resource_id === selectedResource && appointmentStart < slotEnd && appointmentEnd > slotStart;
-            });
-            const canBlock = selectedResource !== "all" && occupiedAppointments.length === 0;
-            const isTarget = time === targetTime;
 
             return (
-              <div
-                ref={isTarget ? targetRowRef : undefined}
-                className={`timeline-row group ${canBlock ? "timeline-free" : ""} ${
-                  isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""
-                }`}
-                style={{ minHeight: `${ROW_HEIGHT}px` }}
-                key={time}
-                role={canBlock ? "button" : undefined}
-                tabIndex={canBlock ? 0 : undefined}
-                onClick={(event) => canBlock && onFree(selectedResource, start, event.currentTarget)}
-                onKeyDown={(e) => {
-                  if (canBlock && (e.key === "Enter" || e.key === " ")) {
-                    e.preventDefault();
-                    onFree(selectedResource, start, e.currentTarget);
-                  }
-                }}
-              >
-                <time>{time}</time>
-                <div className="timeline-events justify-between">
-                  {displayedAppointments.map((appointment) => {
-                    const resource = resources.find(
-                      (item) => item.id === appointment.resource_id,
-                    );
-                    const durationMin =
-                      Math.round(
-                        (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) /
-                          60000,
-                      ) || SLOT_STEP_MINUTES;
-                    const isBlock = appointment.booked_by === "block";
-
-                    return (
-                      <button
-                        type="button"
-                        className={`timeline-event ${isBlock ? "timeline-block" : ""}`}
-                        style={
-                          {
-                            "--event-color": resource?.color || "var(--color-accent)",
-                          } as React.CSSProperties
-                        }
-                        key={appointment.id}
-                        aria-label={`${isBlock ? "Blocage" : "RDV"} ${isBlock ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${formatTime(appointment.start_time)}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onOccupied(appointment.id, event.currentTarget);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onOccupied(appointment.id, e.currentTarget);
-                          }
-                        }}
-                      >
-                        <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                          {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
-                          {isBlock
-                            ? appointment.block_label || "Indisponible"
-                            : appointment.customer?.name || "Client"}
-                        </strong>
-                        <span>
-                          {formatTime(appointment.start_time)} · {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
-                        </span>
-                      </button>
-                    );
-                  })}
-                  {displayedAppointments.length === 0 && canBlock && (
-                    <span className="opacity-0 group-hover:opacity-100 text-[var(--color-accent)] text-xs font-semibold px-2 transition-opacity">
-                      + Créneau libre (créer un RDV ou bloquer)
-                    </span>
-                  )}
+              <React.Fragment key={time}>
+                <div
+                  ref={isTarget ? targetRowRef : undefined}
+                  className={`border-b border-r border-[var(--color-border)] p-1.5 text-xs text-[var(--color-text-muted)] flex items-center justify-center font-mono ${isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_15%,transparent)] font-bold text-[var(--color-accent)]" : ""
+                    }`}
+                  style={{ height: `${ROW_HEIGHT}px` }}
+                >
+                  {time}
                 </div>
-              </div>
+
+                {resources.map((res) => {
+                  const displayedAppointments = appointments.filter((item) => {
+                    if (item.resource_id !== res.id) return false;
+                    const apptMin = toMinutes(formatTime(item.start_time));
+                    if (timeIndex === 0 && apptMin < slotStartMin) return true;
+                    return apptMin >= slotStartMin && apptMin < slotEndMin;
+                  });
+                  const occupiedAppointments = appointments.filter((item) => {
+                    const appointmentStart = new Date(item.start_time).getTime();
+                    const appointmentEnd = new Date(item.end_time).getTime();
+                    return item.resource_id === res.id && appointmentStart < slotEnd && appointmentEnd > slotStart;
+                  });
+                  const isFree = occupiedAppointments.length === 0;
+
+                  return (
+                    <div
+                      key={res.id}
+                      className={`relative border-b border-r border-[var(--color-border)] last:border-r-0 p-0.5 flex items-center group transition-colors ${isFree ? "hover:bg-[color-mix(in_srgb,var(--color-accent)_8%,var(--color-bg-panel))] cursor-pointer" : ""
+                        }`}
+                      style={{ height: `${ROW_HEIGHT}px` }}
+                      role={isFree ? "button" : undefined}
+                      tabIndex={isFree ? 0 : undefined}
+                      onClick={(event) => isFree && onFree(res.id, start, event.currentTarget)}
+                      onKeyDown={(event) => {
+                        if (isFree && (event.key === "Enter" || event.key === " ")) {
+                          event.preventDefault();
+                          onFree(res.id, start, event.currentTarget);
+                        }
+                      }}
+                      aria-label={isFree ? `Créneau libre pour ${res.name} à ${time}. Cliquez pour ajouter un RDV ou bloquer.` : undefined}
+                    >
+                      <div className="timeline-appointment-layer" style={{ pointerEvents: "none", width: "100%", height: "100%" }}>
+                        {displayedAppointments.map((appt) => {
+                          const apptMin = toMinutes(formatTime(appt.start_time));
+                          const offsetMin = Math.max(0, apptMin - slotStartMin);
+                          const topPx = (offsetMin / SLOT_STEP_MINUTES) * ROW_HEIGHT + 2;
+                          const durationMin =
+                            Math.round(
+                              (new Date(appt.end_time).getTime() - new Date(appt.start_time).getTime()) /
+                              60000,
+                            ) || SLOT_STEP_MINUTES;
+                          const heightPx = Math.max(22, (durationMin / SLOT_STEP_MINUTES) * ROW_HEIGHT - 4);
+                          const isBlock = appt.booked_by === "block";
+
+                          return (
+                            <button
+                              key={appt.id}
+                              type="button"
+                              className="absolute inset-x-0.5 z-10 p-1.5 rounded text-left text-xs transition-all overflow-hidden shadow-xs cursor-pointer border-l-3 pointer-events-auto"
+                              style={{
+                                top: `${topPx}px`,
+                                height: `${heightPx}px`,
+                                borderLeftColor: res.color,
+                                backgroundColor: `color-mix(in srgb, ${res.color} 18%, var(--color-bg-panel))`,
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOccupied(appt.id, e.currentTarget);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onOccupied(appt.id, e.currentTarget);
+                                }
+                              }}
+                              aria-label={`${isBlock ? "Blocage" : "Rendez-vous"} de ${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} à ${formatTime(appt.start_time)}`}
+                              title={`${isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"} · ${formatTime(appt.start_time)} - ${formatTime(appt.end_time)}`}
+                            >
+                              <div className="font-semibold truncate flex items-center gap-1 text-[var(--color-text)] leading-tight text-[11px]">
+                                {appt.booked_by === "phone" && <WaveIndicator state="success" />}
+                                <span className="truncate">{isBlock ? appt.block_label || "Indisponible" : appt.customer?.name || "Client"}</span>
+                              </div>
+                              {durationMin >= 25 && (
+                                <div className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight mt-0.5">
+                                  {appt.service?.name || "Blocage"} · {formatTime(appt.start_time)} - {formatTime(appt.end_time)}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {isFree && (
+                        <span className="opacity-0 group-hover:opacity-100 text-[var(--color-accent)] text-xs font-semibold mx-auto transition-opacity pointer-events-none">
+                          +
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
             );
           })}
         </div>
-      )}
+      </div>
+
+      {/* Mobile view (< 768px): single column list */}
+      <div className="block md:hidden">
+        <div className="timeline-head">
+          <span>Heure</span>
+          <span>Rendez-vous et disponibilités</span>
+        </div>
+        {times.map((time, timeIndex) => {
+          const start = parisToISO(data.date, time);
+          const slotStartMin = toMinutes(time);
+          const slotEndMin = slotStartMin + SLOT_STEP_MINUTES;
+          const rowAppointments = appointments.filter((item) => {
+            const apptMin = toMinutes(formatTime(item.start_time));
+            if (timeIndex === 0 && apptMin < slotStartMin) return true;
+            return apptMin >= slotStartMin && apptMin < slotEndMin;
+          });
+          const isTarget = time === targetTime;
+
+          return (
+            <div
+              ref={isTarget ? targetRowRef : undefined}
+              className={`timeline-row ${isTarget ? "bg-[color-mix(in_srgb,var(--color-accent)_10%,transparent)]" : ""}`}
+              style={{ minHeight: `${ROW_HEIGHT}px` }}
+              key={time}
+            >
+              <time>{time}</time>
+              <div className="timeline-events">
+                {rowAppointments.map((appointment) => {
+                  const resource = resources.find(
+                    (item) => item.id === appointment.resource_id,
+                  );
+                  const durationMin =
+                    Math.round(
+                      (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) /
+                      60000,
+                    ) || SLOT_STEP_MINUTES;
+                  const isBlock = appointment.booked_by === "block";
+
+                  return (
+                    <button
+                      type="button"
+                      className={`timeline-event ${isBlock ? "timeline-block" : ""}`}
+                      style={
+                        {
+                          "--event-color": resource?.color || "var(--color-accent)",
+                        } as React.CSSProperties
+                      }
+                      key={appointment.id}
+                      aria-label={`${isBlock ? "Blocage" : "RDV"} ${isBlock ? appointment.block_label || "Indisponible" : appointment.customer?.name || "Client"} à ${formatTime(appointment.start_time)}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOccupied(appointment.id, event.currentTarget);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onOccupied(appointment.id, e.currentTarget);
+                        }
+                      }}
+                    >
+                      <strong style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                        {appointment.booked_by === "phone" && <WaveIndicator state="success" />}
+                        {isBlock
+                          ? appointment.block_label || "Indisponible"
+                          : appointment.customer?.name || "Client"}
+                      </strong>
+                      <span>
+                        {formatTime(appointment.start_time)} · {resource?.name || "Coiffeur"} · {appointment.service?.name || "Blocage"} ({durationMin} min)
+                      </span>
+                    </button>
+                  );
+                })}
+                {rowAppointments.length === 0 && (
+                  <button
+                    type="button"
+                    className="timeline-empty-btn text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent)] py-1 px-2 rounded transition-colors"
+                    onClick={(event) => {
+                      onFree(resources[0]?.id || "", start, event.currentTarget);
+                    }}
+                  >
+                    + Créneau libre
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

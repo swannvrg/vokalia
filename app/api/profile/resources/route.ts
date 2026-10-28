@@ -62,6 +62,22 @@ export async function PATCH(request: Request) {
       user,
       body.businessId,
     );
+    if (body.active === false) {
+      const { count, error: countError } = await supabase
+        .from("resources")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
+        .eq("resource_type", "practitioner")
+        .eq("active", true)
+        .neq("id", body.id);
+      if (countError) throw countError;
+      if (!count || count === 0) {
+        return Response.json(
+          { error: "Au moins un coiffeur doit rester actif." },
+          { status: 400 },
+        );
+      }
+    }
     const changes = { name: String(body.name ?? "").trim(), capacity: 1, color: hexColor(body.color), ...(typeof body.active === "boolean" ? { active: body.active } : {}) };
     const { data, error } = await supabase.from("resources").update(changes).eq("id", body.id).eq("business_id", businessId).eq("resource_type", "practitioner").select("id, name, capacity, active, color, resource_type").single();
     if (error) throw error;

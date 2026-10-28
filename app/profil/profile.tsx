@@ -248,6 +248,11 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
 
   // Save all modified sections
   async function saveAllChanges() {
+    if (resources.filter((r) => r.active).length === 0) {
+      setError("Au moins un coiffeur doit rester actif.");
+      return;
+    }
+
     if (!validateForm()) {
       setError("Veuillez corriger les champs en surbrillance (durée > 0, prix ≥ 0, nom obligatoire).");
       return;
@@ -411,6 +416,10 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
   }
 
   async function saveResourcesSection() {
+    if (resources.filter((r) => r.active).length === 0) {
+      setError("Au moins un coiffeur doit rester actif.");
+      return;
+    }
     for (const res of resources) {
       if (!res.name.trim()) {
         setFieldErrors((prev) => ({ ...prev, [`resource-${res.id}`]: true }));
@@ -437,7 +446,9 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
       setFieldErrors({});
       notify("Coiffeurs enregistrés.");
     } else {
-      setError("Erreur lors de l'enregistrement de l'équipe.");
+      const failed = results.find((r) => !r.ok);
+      const data = failed ? await failed.json().catch(() => null) : null;
+      setError(data?.error || "Erreur lors de l'enregistrement de l'équipe.");
     }
   }
 
@@ -480,6 +491,10 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
   // Toggle active status directly
   async function toggleResourceActive(resource: Resource) {
     const nextState = !resource.active;
+    if (!nextState && resources.filter((r) => r.active).length <= 1) {
+      setError("Au moins un coiffeur doit rester actif.");
+      return;
+    }
     const response = await fetch("/api/profile/resources", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -911,54 +926,69 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
 
             {/* Liste modifiable sans bouton par ligne */}
             <div className="flex flex-col gap-2">
-              {resources.map((resource) => (
-                <div
-                  key={resource.id}
-                  className={`flex flex-wrap items-center gap-3 p-3 rounded-lg border border-[var(--color-border)] transition-opacity ${
-                    resource.active ? "bg-[var(--color-bg-panel)]" : "opacity-50 bg-[var(--color-bg-subtle)]"
-                  }`}
-                >
-                  <input
-                    className={`input flex-1 min-w-[150px] ${
-                      fieldErrors[`resource-${resource.id}`] ? "!border-red-500 !ring-1 !ring-red-500" : ""
+              {resources.map((resource) => {
+                const isLastActive = resource.active && resources.filter((r) => r.active).length <= 1;
+                return (
+                  <div
+                    key={resource.id}
+                    className={`flex flex-wrap items-center gap-3 p-3 rounded-lg border border-[var(--color-border)] transition-opacity ${
+                      resource.active ? "bg-[var(--color-bg-panel)]" : "opacity-50 bg-[var(--color-bg-subtle)]"
                     }`}
-                    value={resource.name}
-                    placeholder="Nom"
-                    onChange={(event) =>
-                      setResources((current) =>
-                        current.map((item) =>
-                          item.id === resource.id
-                            ? { ...item, name: event.target.value }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                  <input
-                    className="input w-12 cursor-pointer"
-                    type="color"
-                    value={resource.color}
-                    onChange={(event) =>
-                      setResources((current) =>
-                        current.map((item) =>
-                          item.id === resource.id
-                            ? { ...item, color: event.target.value }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                  {/* Action secondaire discrète */}
-                  <button
-                    type="button"
-                    className="text-xs text-[var(--color-text-dim)] hover:text-[var(--color-text)] underline p-2 min-h-[44px] flex items-center"
-                    onClick={() => toggleResourceActive(resource)}
                   >
-                    {resource.active ? "Désactiver" : "Réactiver"}
-                  </button>
-                </div>
-              ))}
+                    <input
+                      className={`input flex-1 min-w-[150px] ${
+                        fieldErrors[`resource-${resource.id}`] ? "!border-red-500 !ring-1 !ring-red-500" : ""
+                      }`}
+                      value={resource.name}
+                      placeholder="Nom"
+                      onChange={(event) =>
+                        setResources((current) =>
+                          current.map((item) =>
+                            item.id === resource.id
+                              ? { ...item, name: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                    <input
+                      className="input w-12 cursor-pointer"
+                      type="color"
+                      value={resource.color}
+                      onChange={(event) =>
+                        setResources((current) =>
+                          current.map((item) =>
+                            item.id === resource.id
+                              ? { ...item, color: event.target.value }
+                              : item,
+                          ),
+                        )
+                      }
+                    />
+                    {/* Action secondaire discrète */}
+                    <button
+                      type="button"
+                      disabled={isLastActive}
+                      title={isLastActive ? "Au moins un coiffeur doit rester actif" : undefined}
+                      className={`text-xs p-2 min-h-[44px] flex items-center ${
+                        isLastActive
+                          ? "text-[var(--color-text-dim)] opacity-40 cursor-not-allowed no-underline"
+                          : "text-[var(--color-text-dim)] hover:text-[var(--color-text)] underline"
+                      }`}
+                      onClick={() => !isLastActive && toggleResourceActive(resource)}
+                    >
+                      {resource.active ? "Désactiver" : "Réactiver"}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
+
+            {resources.filter((r) => r.active).length <= 1 && (
+              <p className="text-xs text-[var(--color-accent-soft)] mt-2 font-medium">
+                Au moins un coiffeur doit rester actif
+              </p>
+            )}
 
             <p className="text-[var(--color-text-muted)] text-xs mt-3">
               Désactiver un coiffeur le retire du calendrier et des nouvelles prises de rendez-vous, tout en conservant son historique.
