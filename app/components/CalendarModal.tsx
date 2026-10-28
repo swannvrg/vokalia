@@ -4,6 +4,7 @@ import React, { useState, useRef, useMemo, useEffect } from "react";
 import type { CalendarData, Appointment } from "@/lib/types";
 import { useModalFocusTrap } from "@/app/components/Modal";
 import WaveIndicator from "@/app/components/WaveIndicator";
+import Icon from "@/app/components/Icon";
 import { formatPhoneDisplay } from "@/lib/format-phone";
 import { SLOT_STEP_MINUTES } from "@/lib/constants";
 
@@ -768,7 +769,7 @@ export default function CalendarModal({
                         href={`tel:${appointment.customer.phone_number.replace(/\s/g, "")}`}
                         title="Appeler ce numéro"
                       >
-                        <span aria-hidden="true">📞</span>
+                        <Icon name="phone" size={14} />
                         <span>{formatPhoneDisplay(appointment.customer.phone_number)}</span>
                       </a>
                     ) : (
