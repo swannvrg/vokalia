@@ -5,6 +5,7 @@ import Logo from "@/app/components/Logo";
 import Link from "next/link";
 import { SLOT_STEP_MINUTES } from "@/lib/constants";
 import { usePageReady } from "@/app/components/PageTransitionProvider";
+import { formatPhoneDisplay } from "@/lib/format-phone";
 
 type Service = {
   id: string;
@@ -115,43 +116,6 @@ function firstOpenDate(hours: BusinessHours | undefined) {
     if (!isClosedDay(value, hours)) return value;
   }
   return today;
-}
-
-const icsEscape = (value: string) =>
-  value.replace(/[\\,;\n]/g, (character) =>
-    character === "\n" ? "\\n" : `\\${character}`,
-  );
-
-function downloadCalendarFile(confirmation: Confirmation) {
-  const start = new Date(confirmation.slot.slot_start);
-  const end = new Date(confirmation.slot.slot_end);
-  const toIcsDate = (value: Date) =>
-    value
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d{3}Z$/, "Z");
-  const content = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Vokalia//Booking//FR",
-    "BEGIN:VEVENT",
-    `UID:${confirmation.slot.slot_start}-${confirmation.slot.resource_id}@vokalia`,
-    `DTSTAMP:${toIcsDate(new Date())}`,
-    `DTSTART:${toIcsDate(start)}`,
-    `DTEND:${toIcsDate(end)}`,
-    `SUMMARY:${icsEscape(`${confirmation.service.name} avec ${confirmation.slot.resource_name}`)}`,
-    `LOCATION:${icsEscape([confirmation.salonName, confirmation.address].filter(Boolean).join(", "))}`,
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ].join("\r\n");
-  const url = URL.createObjectURL(
-    new Blob([content], { type: "text/calendar;charset=utf-8" }),
-  );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "rendez-vous-vokalia.ics";
-  link.click();
-  URL.revokeObjectURL(url);
 }
 
 function CheckIcon({ size = 14 }: { size?: number }) {
@@ -417,6 +381,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   }
 
   const salonPhone = data?.business.real_phone_number;
+  const salonPhoneDisplay = formatPhoneDisplay(salonPhone);
 
   const salonHref = businessId ? `/${businessId}/profil-public` : "/";
   const monthLabel = new Intl.DateTimeFormat("fr-FR", {
@@ -481,7 +446,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
                 <p className="bk-aside-line">
                   <Icon name="phone" />
                   <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>
-                    {salonPhone}
+                    {salonPhoneDisplay}
                   </a>
                 </p>
               )}
@@ -545,7 +510,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
                   <>
                     {" · "}
                     <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>
-                      {salonPhone}
+                      {salonPhoneDisplay}
                     </a>
                   </>
                 )}
@@ -586,11 +551,19 @@ export default function BookingForm({ businessId }: { businessId: string }) {
                   <p>
                     Téléphone du salon :{" "}
                     <a href={`tel:${confirmation.salonPhone.replace(/\s/g, "")}`}>
-                      {confirmation.salonPhone}
+                      {formatPhoneDisplay(confirmation.salonPhone)}
                     </a>
                   </p>
                 )}
-
+                <div className="bk-confirm-actions">
+                  <button
+                    className="button primary"
+                    type="button"
+                    onClick={() => setConfirmation(null)}
+                  >
+                    Prendre un autre rendez-vous
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={submit} noValidate>
@@ -647,6 +620,19 @@ export default function BookingForm({ businessId }: { businessId: string }) {
                       <Icon name="next" size={18} />
                     </button>
                   </div>
+                  <details className="bk-more-date">
+                    <summary>Choisir une autre date</summary>
+                    <input
+                      className="input"
+                      type="date"
+                      min={dateOptions[0]}
+                      value={date}
+                      onChange={(event) => {
+                        setDate(event.target.value);
+                        setSelectedSlot(null);
+                      }}
+                    />
+                  </details>
                 </section>
 
                 <section className="bk-section bk-fields">
