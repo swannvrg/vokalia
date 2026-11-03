@@ -48,11 +48,18 @@ export function generateTemporaryPassword() {
 export async function authenticate(email: string, password: string) {
   const { data: user, error } = await createSupabaseAdminClient()
     .from("app_users")
-    .select("id, email, password_hash, role, business_id, active")
+    .select("id, email, password_hash, role, business_id, active, must_change_password, onboarding_pending")
     .eq("email", email.trim().toLowerCase())
     .maybeSingle();
   if (error || !user?.active || !user.password_hash || !verifyPassword(password, user.password_hash)) return null;
-  return { id: user.id, email: user.email, role: user.role, business_id: user.business_id };
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    business_id: user.business_id,
+    must_change_password: Boolean(user.must_change_password),
+    onboarding_pending: Boolean(user.onboarding_pending),
+  };
 }
 
 export async function createSession(userId: string) {
@@ -83,7 +90,7 @@ export async function getCurrentUser() {
   if (!token) return null;
   const { data } = await createSupabaseAdminClient()
     .from("app_sessions")
-    .select("expires_at, user:app_users(id, email, role, business_id, active)")
+    .select("expires_at, user:app_users(id, email, role, business_id, active, must_change_password, onboarding_pending)")
     .eq("token_hash", tokenHash(token))
     .maybeSingle();
   const user = Array.isArray(data?.user) ? data.user[0] : data?.user;

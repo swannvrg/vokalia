@@ -24,5 +24,11 @@ export async function POST(request: Request) {
     }
   }
 
-  return Response.json({ ok: true, role: user.role, businessId });
+  return Response.json({
+    ok: true,
+    role: user.role,
+    businessId,
+    mustChangePassword: Boolean(user.must_change_password),
+    onboardingPending: Boolean(user.onboarding_pending),
+  });
 }
