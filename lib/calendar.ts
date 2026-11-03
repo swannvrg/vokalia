@@ -78,13 +78,13 @@ export async function getCalendarData(
         });
         if (error) throw error;
         return (data ?? [])
-        .map((slot: {
-          resource_id: string;
-          slot_start?: string;
-          slot_end?: string;
-          slot_display?: string;
-          slot_token?: string;
-        }) => {
+          .map((slot: {
+            resource_id: string;
+            slot_start?: string;
+            slot_end?: string;
+            slot_display?: string;
+            slot_token?: string;
+          }) => {
           let slotStart = slot.slot_start;
           if (!slotStart && slot.slot_token) {
             try {
@@ -109,13 +109,15 @@ export async function getCalendarData(
                   new Date(slotStart).getTime() + (service.duration_minutes || 30) * 60_000,
                 ).toISOString()
               : "");
-          return {
-            resource_id: slot.resource_id,
-            slot_start: slotStart ?? "",
-            slot_end: slotEnd,
-          };
-        })
-        .filter((slot: { slot_start: string }) => isParisDate(slot.slot_start, date));
+            return {
+              resource_id: slot.resource_id,
+              slot_start: slotStart ?? "",
+              slot_end: slotEnd,
+            };
+          })
+          .filter((slot: { slot_start: string }) =>
+            isParisDate(slot.slot_start, date),
+          );
       }),
     ),
   );
@@ -128,7 +130,9 @@ export async function getCalendarData(
       ]),
     ).values(),
   ).sort((first, second) =>
-    new Date(first.slot_start).getTime() - new Date(second.slot_start).getTime(),
+    new Date(first.slot_start).getTime() -
+      new Date(second.slot_start).getTime() ||
+    first.resource_id.localeCompare(second.resource_id),
   );
 
   return {
