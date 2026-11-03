@@ -30,7 +30,11 @@ export default function LoginPage() {
           ? new URLSearchParams(window.location.search).get("redirect")
           : null;
 
-      if (redirectParam && redirectParam.startsWith("/")) {
+      if (result.mustChangePassword) {
+        router.replace("/bienvenue/mot-de-passe");
+      } else if (result.onboardingPending && result.businessId) {
+        router.replace(`/${result.businessId}/onboarding`);
+      } else if (redirectParam && redirectParam.startsWith("/")) {
         router.replace(redirectParam);
       } else if (result.role === "admin") {
         router.replace("/admin");

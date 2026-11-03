@@ -1,4 +1,4 @@
-import { hashPassword, requireUser } from "@/lib/supabase";
+import { hashPassword, requireUser, verifyPassword } from "@/lib/supabase";
 
 const rules = {
   length: (value: string) => value.length >= 8,
@@ -17,6 +17,16 @@ export async function POST(request: Request) {
     const password = String(body.password ?? "");
     if (!Object.values(rules).every((rule) => rule(password))) {
       return Response.json({ error: "Le mot de passe doit contenir 8 caractères, une majuscule, un chiffre et un symbole." }, { status: 400 });
+    }
+    const { data: current, error: currentError } = await supabase
+      .from("app_users")
+      .select("password_hash")
+      .eq("id", user.id)
+      .eq("must_change_password", true)
+      .single();
+    if (currentError || !current?.password_hash) throw currentError || new Error("PASSWORD_NOT_FOUND");
+    if (verifyPassword(password, current.password_hash)) {
+      return Response.json({ error: "Choisissez un mot de passe différent du mot de passe provisoire." }, { status: 400 });
     }
     const { error } = await supabase
       .from("app_users")

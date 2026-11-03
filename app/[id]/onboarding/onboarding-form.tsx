@@ -48,6 +48,15 @@ export default function OnboardingForm({ businessId }: { businessId: string }) {
         }
         setResources(loadedResources);
         setServices(loadedServices);
+        if (!loadedBusiness.name?.trim() || !loadedBusiness.address?.trim() || !loadedBusiness.real_phone_number?.trim()) {
+          setStep(0);
+        } else if (!loadedHours.some((item: { open_time?: string; close_time?: string }) => item.open_time && item.close_time)) {
+          setStep(1);
+        } else if (!loadedResources.some((item: Resource) => item.active)) {
+          setStep(2);
+        } else if (!loadedServices.some((item: Service) => item.active !== false)) {
+          setStep(3);
+        }
       } catch {
         setError("Impossible de charger la configuration.");
       } finally {
