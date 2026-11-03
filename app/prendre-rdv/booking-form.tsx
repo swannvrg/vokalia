@@ -182,7 +182,13 @@ const DAY_NAMES = [
   "Dimanche",
 ];
 
-function Icon({ name, size = 16 }: { name: "back" | "next" | "phone" | "pin"; size?: number }) {
+function Icon({
+  name,
+  size = 16,
+}: {
+  name: "back" | "next" | "phone" | "pin";
+  size?: number;
+}) {
   const shapes = {
     back: <path d="M15 5l-7 7 7 7" />,
     next: <path d="M9 5l7 7-7 7" />,
@@ -444,7 +450,10 @@ export default function BookingForm({ businessId }: { businessId: string }) {
             <span>Fiche du salon</span>
           </Link>
           {salonPhone && (
-            <a className="bk-nav-call" href={`tel:${salonPhone.replace(/\s/g, "")}`}>
+            <a
+              className="bk-nav-call"
+              href={`tel:${salonPhone.replace(/\s/g, "")}`}
+            >
               <Icon name="phone" size={16} />
               <span>Appeler</span>
             </a>
@@ -471,7 +480,9 @@ export default function BookingForm({ businessId }: { businessId: string }) {
               {salonPhone && (
                 <p className="bk-aside-line">
                   <Icon name="phone" />
-                  <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>{salonPhone}</a>
+                  <a href={`tel:${salonPhone.replace(/\s/g, "")}`}>
+                    {salonPhone}
+                  </a>
                 </p>
               )}
             </div>
@@ -479,7 +490,10 @@ export default function BookingForm({ businessId }: { businessId: string }) {
               <h3>Horaires</h3>
               <ul className="bk-hours">
                 {hoursRows.map((row, index) => (
-                  <li key={row.label} className={index === todayIndex ? "today" : ""}>
+                  <li
+                    key={row.label}
+                    className={index === todayIndex ? "today" : ""}
+                  >
                     <span>{row.label}</span>
                     <span>{row.text}</span>
                   </li>
@@ -514,7 +528,6 @@ export default function BookingForm({ businessId }: { businessId: string }) {
                 <p className="bk-muted">Rien de sélectionné pour l’instant.</p>
               )}
             </div>
-
           </aside>
           <div className="bk-card">
             <header className="bk-brand">
