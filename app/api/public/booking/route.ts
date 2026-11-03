@@ -2,6 +2,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase";
 import { isWithinOpeningHours } from "@/lib/business-hours";
 import { normalizeFrenchPhone } from "@/lib/format-phone";
 import { SLOT_STEP_MINUTES } from "@/lib/constants";
+import { sendEmail } from "@/lib/email";
+import { buildBookingMessage } from "@/lib/booking-message";
 
 const parisDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
 
@@ -132,9 +134,9 @@ export async function POST(request: Request) {
     if (!phone) return Response.json({ error: "Numéro de téléphone invalide. Utilisez 06 12 34 56 78 ou +33 6 12 34 56 78." }, { status: 400 });
     if (Number.isNaN(new Date(startTime).getTime())) return Response.json({ error: "Date ou heure invalide." }, { status: 400 });
 
-    const { data: resource, error: resourceError } = await supabase.from("resources").select("business_id").eq("id", resourceId).eq("business_id", businessId).eq("resource_type", "practitioner").eq("active", true).single();
+    const { data: resource, error: resourceError } = await supabase.from("resources").select("business_id, name").eq("id", resourceId).eq("business_id", businessId).eq("resource_type", "practitioner").eq("active", true).single();
     if (resourceError || !resource) return Response.json({ error: "Ce Coiffeur n'est plus disponible." }, { status: 400 });
-    const { data: service, error: serviceError } = await supabase.from("services").select("duration_minutes").eq("id", serviceId).eq("business_id", resource.business_id).eq("active", true).single();
+    const { data: service, error: serviceError } = await supabase.from("services").select("name, duration_minutes, price").eq("id", serviceId).eq("business_id", resource.business_id).eq("active", true).single();
     if (serviceError || !service) return Response.json({ error: "Cette prestation n'est plus disponible." }, { status: 400 });
     if (!(await isWithinOpeningHours(supabase, resource.business_id, new Date(startTime), service.duration_minutes))) {
       return Response.json({ error: "Ce créneau est en dehors des heures d'ouverture du salon." }, { status: 400 });
@@ -143,6 +145,37 @@ export async function POST(request: Request) {
     if (error) {
       if (error.message.includes("SLOT_NO_LONGER_AVAILABLE")) return Response.json({ error: "Ce créneau vient d'être réservé. Choisissez-en un autre." }, { status: 409 });
       throw error;
+    }
+    const recipient = process.env.BOOKING_NOTIFY_EMAIL;
+    if (recipient) {
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("name, address, real_phone_number")
+        .eq("id", resource.business_id)
+        .single();
+      const message = buildBookingMessage({
+        customerName: name,
+        customerPhone: phone,
+        salonName: business?.name ?? "Salon",
+        address: business?.address,
+        salonPhone: business?.real_phone_number,
+        serviceName: service.name,
+        durationMinutes: service.duration_minutes,
+        price: service.price,
+        startTime,
+        resourceName: resource.name,
+        isTest: true,
+      });
+      void sendEmail({
+          to: recipient,
+          subject: message.subject,
+          html: message.text.replace(/\n/g, "<br>"),
+          text: message.text,
+        }).catch((sendError: unknown) => {
+        console.error("[public-booking] confirmation email failed", {
+          error: sendError instanceof Error ? sendError.message.slice(0, 200) : "UNKNOWN_SEND_ERROR",
+        });
+        });
     }
     return Response.json({ id: data }, { status: 201 });
   } catch (error) {

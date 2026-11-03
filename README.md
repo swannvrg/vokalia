@@ -16,6 +16,13 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Notifications de réservation
+
+Configurez `BOOKING_NOTIFY_EMAIL` avec l'adresse qui doit recevoir les
+notifications des réservations en ligne. L'envoi utilise le même transport
+SMTP que les autres emails transactionnels et ne fait pas échouer une
+réservation si le serveur SMTP est indisponible.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
