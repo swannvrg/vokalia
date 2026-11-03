@@ -1539,17 +1539,6 @@ input[type="color"].input {
   background: transparent;
   cursor: default;
 }
-.public-footer-linkedin-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
-  background: var(--color-text-muted);
-  color: var(--color-bg-panel);
-  font-size: 11px;
-  font-weight: 800;
-}
 .public-footer-contact {
   display: flex;
   flex-direction: column;
@@ -1574,12 +1563,11 @@ input[type="color"].input {
   font-size: 18px;
 }
 .public-footer-mark {
-  width: 100%;
-  max-width: 200px;
-  align-items: center;
-  justify-content: flex-start;
-  justify-self: stretch;
-  align-self: center;
+  width: 160px;
+  max-width: 160px;
+  align-items: flex-start;
+  justify-self: center;
+  align-self: start;
   flex-direction: column;
   gap: 2px;
   color: var(--color-accent);
@@ -1626,9 +1614,6 @@ input[type="color"].input {
   }
   .public-footer-logo {
     align-self: center;
-  }
-  .public-footer-mark {
-    justify-self: start;
   }
 }
 @media (min-width: 1024px) {
