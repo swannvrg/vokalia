@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import DashboardShell from "@/app/components/DashboardShell";
 import { usePageReady } from "@/app/components/PageTransitionProvider";
@@ -14,6 +15,9 @@ export default function AdminDashboard({ initialRequests, businesses }: { initia
   const [requests, setRequests] = useState(initialRequests);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<{ text: string; url?: string } | null>(null);
+  const [invite, setInvite] = useState({ salonName: "", email: "", phone: "" });
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
   const pending = requests.filter((item) => item.status === "pending");
 
   async function processRequest(requestId: string, action: "approve" | "reject") {
@@ -25,6 +29,32 @@ export default function AdminDashboard({ initialRequests, businesses }: { initia
     if (result.warning) setNotice({ text: result.warning, url: result.invitationUrl });
     setRequests((items) => items.map((item) => item.id === requestId ? { ...item, status: action === "approve" ? "approved" : "rejected" } : item));
     router.refresh();
+  }
+
+  async function inviteSalon(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    setNotice(null);
+    setTemporaryPassword("");
+    setInviteLoading(true);
+    try {
+      const response = await fetch("/api/admin/invite-salon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(invite),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error || "Invitation impossible.");
+        return;
+      }
+      setTemporaryPassword(result.temporaryPassword);
+      setNotice({ text: result.warning || "Invitation créée et email envoyé." });
+      setInvite({ salonName: "", email: "", phone: "" });
+      router.refresh();
+    } finally {
+      setInviteLoading(false);
+    }
   }
 
   return <DashboardShell isAdmin={true}>
@@ -47,6 +77,25 @@ export default function AdminDashboard({ initialRequests, businesses }: { initia
       </div>
       {error && <div className="error">{error}</div>}
       {notice && <div className="booking-success">{notice.text}{notice.url && <> <a href={notice.url}>Ouvrir le lien d&apos;invitation</a></>}</div>}
+      {temporaryPassword && (
+        <section className="panel">
+          <h3>Mot de passe provisoire</h3>
+          <p>Transmettez-le maintenant : il ne sera plus affiché.</p>
+          <div className="field-row">
+            <code>{temporaryPassword}</code>
+            <button type="button" className="button ghost" onClick={() => navigator.clipboard.writeText(temporaryPassword)}>Copier</button>
+          </div>
+        </section>
+      )}
+      <section className="panel">
+        <h3>Inviter un salon</h3>
+        <form className="form-grid" onSubmit={inviteSalon}>
+          <div className="field"><label htmlFor="invite-salon-name">Nom du salon</label><input className="input" id="invite-salon-name" required value={invite.salonName} onChange={(event) => setInvite({ ...invite, salonName: event.target.value })} /></div>
+          <div className="field"><label htmlFor="invite-email">Email du barber</label><input className="input" id="invite-email" type="email" required value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} /></div>
+          <div className="field"><label htmlFor="invite-phone">Téléphone (optionnel)</label><input className="input" id="invite-phone" type="tel" value={invite.phone} onChange={(event) => setInvite({ ...invite, phone: event.target.value })} /></div>
+          <button className="button primary" disabled={inviteLoading}>{inviteLoading ? "Création..." : "Inviter le salon"}</button>
+        </form>
+      </section>
       <section className="panel">
         <h3>En attente ({pending.length})</h3>
         {pending.length === 0 ? (

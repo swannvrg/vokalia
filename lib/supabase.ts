@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from "node:crypto";
 
 const SESSION_COOKIE = "atelier_session";
 const SESSION_DAYS = 30;
@@ -24,6 +24,25 @@ export function verifyPassword(password: string, storedHash: string) {
   const actual = scryptSync(password, salt, 64);
   const expectedBuffer = Buffer.from(expected, "hex");
   return actual.length === expectedBuffer.length && timingSafeEqual(actual, expectedBuffer);
+}
+
+export function generateTemporaryPassword() {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%^&*+-=?";
+  const all = upper + lower + digits + symbols;
+  const required = [
+    upper[randomInt(upper.length)],
+    digits[randomInt(digits.length)],
+    symbols[randomInt(symbols.length)],
+  ];
+  while (required.length < 12) required.push(all[randomInt(all.length)]);
+  for (let index = required.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(index + 1);
+    [required[index], required[swapIndex]] = [required[swapIndex], required[index]];
+  }
+  return required.join("");
 }
 
 export async function authenticate(email: string, password: string) {

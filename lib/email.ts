@@ -83,3 +83,36 @@ export async function sendSalonInvitationEmail({
 
   await sendEmail({ to, subject: "Votre espace Vokalia est prêt", html });
 }
+
+export async function sendTemporaryPasswordEmail({
+  to,
+  salonName,
+  loginEmail,
+  temporaryPassword,
+}: {
+  to: string;
+  salonName: string;
+  loginEmail: string;
+  temporaryPassword: string;
+}) {
+  const safeSalonName = escapeHtml(salonName);
+  const safeLoginEmail = escapeHtml(loginEmail);
+  const safeTemporaryPassword = escapeHtml(temporaryPassword);
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/login`;
+  const safeLoginUrl = escapeHtml(loginUrl);
+  const html = `
+<p>Bonjour,</p>
+<p>Votre espace pour <strong>${safeSalonName}</strong> est prêt sur Vokalia.</p>
+<p>Connectez-vous ici : <a href="${safeLoginUrl}">${safeLoginUrl}</a></p>
+<p>Email de connexion : <strong>${safeLoginEmail}</strong><br />
+Mot de passe provisoire : <strong>${safeTemporaryPassword}</strong></p>
+<p>Vous devrez le remplacer dès votre première connexion.</p>
+<p>À bientôt,<br />Vokalia</p>
+`.trim();
+  await sendEmail({
+    to,
+    subject: "Votre espace Vokalia est prêt",
+    html,
+    text: `Bonjour,\n\nVotre espace pour ${salonName} est prêt sur Vokalia.\n\nLien de connexion : ${loginUrl}\nEmail : ${loginEmail}\nMot de passe provisoire : ${temporaryPassword}\n\nVous devrez le remplacer dès votre première connexion.\n\nÀ bientôt,\nVokalia`,
+  });
+}
