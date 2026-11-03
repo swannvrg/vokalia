@@ -36,13 +36,23 @@ export async function POST(request: Request) {
       status: "active",
       listed: false,
     };
-    const { data: business, error: businessError } = await supabase
+    let { data: business, error: businessError } = await supabase
       .from("businesses")
       .insert(businessValues)
       .select("id")
       .single();
-    if (businessError) throw businessError;
-    businessId = business.id;
+    if (businessError && /listed|column/i.test(businessError.message ?? "")) {
+      const withoutListed = { ...businessValues };
+      delete withoutListed.listed;
+      ({ data: business, error: businessError } = await supabase
+        .from("businesses")
+        .insert(withoutListed)
+        .select("id")
+        .single());
+    }
+    if (businessError || !business) throw businessError || new Error("BUSINESS_CREATE_FAILED");
+    const createdBusiness = business;
+    businessId = createdBusiness.id;
 
     const { data: user, error: userError } = await supabase
       .from("app_users")
