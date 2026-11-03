@@ -62,7 +62,10 @@ export default function CallbackPanel({
   }, [businessId]);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   const dir = sortOrder === "asc" ? 1 : -1;

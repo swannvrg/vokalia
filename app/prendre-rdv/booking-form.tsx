@@ -197,6 +197,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   const [booking, setBooking] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
   const confirmationRef = useRef<HTMLDivElement>(null);
   const initialised = useRef(false);
   const datesRef = useRef<HTMLDivElement>(null);
@@ -255,6 +256,11 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   }, [businessId, date, serviceId, resourceId, refreshNonce, signalReady]);
 
   useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!confirmation) return;
     window.scrollTo({ top: 0, behavior: "smooth" });
     confirmationRef.current?.focus();
@@ -270,7 +276,12 @@ export default function BookingForm({ businessId }: { businessId: string }) {
     const today = date === parisDate();
     for (const slot of data?.slots ?? []) {
       if (!slot.slot_start) continue;
-      if (today && new Date(slot.slot_start).getTime() < Date.now()) continue;
+      if (
+        today &&
+        currentTime !== null &&
+        new Date(slot.slot_start).getTime() < currentTime
+      )
+        continue;
       const label = formatTime(slot.slot_start);
       const minutesPart = parseInt(label.slice(3, 5), 10);
       if (Number.isNaN(minutesPart) || minutesPart % SLOT_STEP_MINUTES !== 0) continue;
@@ -282,7 +293,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
     return [...map.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([label, slots]) => ({ label, slots }));
-  }, [data, date]);
+  }, [currentTime, data, date]);
 
   const periods = useMemo(() => {
     const hourOf = (label: string) => parseInt(label.slice(0, 2), 10);
