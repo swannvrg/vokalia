@@ -12,6 +12,7 @@ type Business = {
   id: string;
   name: string;
   real_phone_number: string | null;
+  phone_number: string | null;
   address: string | null;
   timezone: string;
 };
@@ -175,6 +176,7 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
     return (
       business.name !== initialBusiness.name ||
       (business.real_phone_number ?? "") !== (initialBusiness.real_phone_number ?? "") ||
+      (business.phone_number ?? "") !== (initialBusiness.phone_number ?? "") ||
       (business.address ?? "") !== (initialBusiness.address ?? "")
     );
   }, [business, initialBusiness]);
@@ -272,6 +274,7 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
             body: JSON.stringify({
               name: business.name,
               phoneNumber: business.real_phone_number,
+              assistantPhoneNumber: business.phone_number,
               address: business.address,
               ...(businessId ? { businessId } : {}),
             }),
@@ -339,10 +342,11 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
       }
 
       const results = await Promise.all(promises);
-      const hasError = results.some((r) => !r.ok);
+      const failedResult = results.find((r) => !r.ok);
 
-      if (hasError) {
-        setError("Une erreur est survenue lors de l'enregistrement de certaines modifications.");
+      if (failedResult) {
+        const data = await failedResult.json().catch(() => null);
+        setError(data?.error || "Une erreur est survenue lors de l'enregistrement de certaines modifications.");
       } else {
         await load();
         setFieldErrors({});
@@ -370,13 +374,16 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
       body: JSON.stringify({
         name: business.name,
         phoneNumber: business.real_phone_number,
+        assistantPhoneNumber: business.phone_number,
         address: business.address,
         ...(businessId ? { businessId } : {}),
       }),
     });
     setIsSaving(false);
     if (response.ok) {
-      setInitialBusiness({ ...business });
+      const savedBusiness = await response.json();
+      setBusiness(savedBusiness);
+      setInitialBusiness(savedBusiness);
       setFieldErrors((prev) => {
         const next = { ...prev };
         delete next["business-name"];
@@ -710,7 +717,7 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                 />
               </div>
               <div className="field">
-                <label htmlFor="business-phone">Téléphone</label>
+                <label htmlFor="business-phone">Téléphone du salon</label>
                 <input
                   className="input"
                   id="business-phone"
@@ -724,6 +731,28 @@ export default function Profile({ businessId }: { businessId?: string } = {}) {
                     })
                   }
                 />
+                <p className="text-sm text-[var(--color-text-dim)] mt-1">
+                  Votre numéro habituel, celui que vos clients connaissent.
+                </p>
+              </div>
+              <div className="field">
+                <label htmlFor="assistant-phone">Numéro de l&apos;assistant vocal</label>
+                <input
+                  className="input"
+                  id="assistant-phone"
+                  type="tel"
+                  placeholder="+33 4 15 87 04 27"
+                  value={business.phone_number ?? ""}
+                  onChange={(event) =>
+                     setBusiness({
+                       ...business,
+                       phone_number: event.target.value,
+                     })
+                  }
+                />
+                <p className="text-sm text-[var(--color-text-dim)] mt-1">
+                  Le numéro qui répond avec l&apos;assistant (fourni par Vokalia).
+                </p>
               </div>
               <div className="field">
                 <label htmlFor="business-address">Adresse</label>
