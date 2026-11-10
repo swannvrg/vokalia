@@ -45,13 +45,22 @@ export function generateTemporaryPassword() {
   return required.join("");
 }
 
+// Hash factice : le calcul scrypt a lieu même si le compte n'existe pas,
+// pour que le temps de réponse ne révèle pas quels emails ont un compte.
+let dummyPasswordHash: string | null = null;
+function getDummyPasswordHash() {
+  dummyPasswordHash ??= hashPassword(randomBytes(16).toString("hex"));
+  return dummyPasswordHash;
+}
+
 export async function authenticate(email: string, password: string) {
   const { data: user, error } = await createSupabaseAdminClient()
     .from("app_users")
     .select("id, email, password_hash, role, business_id, active, must_change_password, onboarding_pending")
     .eq("email", email.trim().toLowerCase())
     .maybeSingle();
-  if (error || !user?.active || !user.password_hash || !verifyPassword(password, user.password_hash)) return null;
+  const passwordOk = verifyPassword(password, user?.password_hash || getDummyPasswordHash());
+  if (error || !user?.active || !user.password_hash || !passwordOk) return null;
   return {
     id: user.id,
     email: user.email,
@@ -65,9 +74,23 @@ export async function authenticate(email: string, password: string) {
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const { error } = await createSupabaseAdminClient().from("app_sessions").insert({ user_id: userId, token_hash: tokenHash(token), expires_at: expiresAt });
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("app_sessions").insert({ user_id: userId, token_hash: tokenHash(token), expires_at: expiresAt });
   if (error) throw error;
   (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", expires: new Date(expiresAt) });
+  // Ménage : les sessions expirées de cet utilisateur ne servent plus à rien.
+  const { error: purgeError } = await supabase.from("app_sessions").delete().eq("user_id", userId).lt("expires_at", new Date().toISOString());
+  if (purgeError) console.error("[session] Purge des sessions expirées impossible :", purgeError.message);
+}
+
+// Déconnecte les autres appareils d'un utilisateur (après un changement de mot de passe).
+// keepCurrent : conserve la session du navigateur qui fait la demande.
+export async function revokeUserSessions(userId: string, { keepCurrent }: { keepCurrent: boolean }) {
+  let query = createSupabaseAdminClient().from("app_sessions").delete().eq("user_id", userId);
+  const token = keepCurrent ? (await cookies()).get(SESSION_COOKIE)?.value : undefined;
+  if (token) query = query.neq("token_hash", tokenHash(token));
+  const { error } = await query;
+  if (error) throw error;
 }
 
 export async function createInvitationToken(userId: string) {

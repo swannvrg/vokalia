@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email";
 import { buildBookingMessage } from "@/lib/booking-message";
 import { containsLinkOrDomain } from "@/lib/invitation-security";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { getRequestIp } from "@/lib/request-ip";
 
 const parisDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
 
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
     }
     if (!phone) return Response.json({ error: "Numéro de téléphone invalide. Utilisez 06 12 34 56 78 ou +33 6 12 34 56 78." }, { status: 400 });
     if (Number.isNaN(new Date(startTime).getTime())) return Response.json({ error: "Date ou heure invalide." }, { status: 400 });
-    const requestIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
+    const requestIp = getRequestIp(request);
     if (!(await verifyTurnstileToken(String(body.turnstileToken ?? ""), requestIp))) {
       if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY) {
         return Response.json({ error: "La vérification anti-robot a échoué. Réessayez." }, { status: 400 });
@@ -162,6 +163,17 @@ export async function POST(request: Request) {
       .eq("request_ip", requestIp)
       .gte("created_at", oneHourAgo);
     if (ipError) throw ipError;
+
+    // Même règle que le GET : seuls les salons actifs et listés acceptent les réservations publiques.
+    const { data: listedBusiness, error: listedBusinessError } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("id", businessId)
+      .eq("status", "active")
+      .eq("listed", true)
+      .maybeSingle();
+    if (listedBusinessError) throw listedBusinessError;
+    if (!listedBusiness) return Response.json({ error: "Salon introuvable." }, { status: 404 });
 
     const { data: resource, error: resourceError } = await supabase.from("resources").select("business_id, name").eq("id", resourceId).eq("business_id", businessId).eq("resource_type", "practitioner").eq("active", true).single();
     if (resourceError || !resource) return Response.json({ error: "Ce Coiffeur n'est plus disponible." }, { status: 400 });
@@ -197,6 +209,14 @@ export async function POST(request: Request) {
     if (error) {
       if (error.message.includes("SLOT_NO_LONGER_AVAILABLE")) return Response.json({ error: "Ce créneau vient d'être réservé. Choisissez-en un autre." }, { status: 409 });
       throw error;
+    }
+    // book_appointment ne connaît pas l'IP : on la rattache ici, sinon la limite par IP ci-dessus compte toujours 0.
+    const { error: requestIpError } = await supabase
+      .from("appointments")
+      .update({ request_ip: requestIp })
+      .eq("id", data);
+    if (requestIpError) {
+      console.error("[public-booking] request_ip non enregistré :", requestIpError.message);
     }
     const recipient = process.env.BOOKING_NOTIFY_EMAIL;
     if (recipient) {

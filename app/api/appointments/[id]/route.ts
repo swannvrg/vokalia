@@ -47,6 +47,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
         return Response.json({ error: "Durée invalide." }, { status: 400 });
       }
+      // Le coiffeur cible doit appartenir à ce salon : sinon un blocage pourrait occuper l'agenda d'un autre salon.
+      const { data: blockResource, error: blockResourceError } = await supabase
+        .from("resources")
+        .select("id")
+        .eq("id", resourceId)
+        .eq("business_id", businessId)
+        .eq("resource_type", "practitioner")
+        .maybeSingle();
+      if (blockResourceError) throw blockResourceError;
+      if (!blockResource) return Response.json({ error: "Coiffeur introuvable." }, { status: 404 });
       const start = new Date(String(body.startTime ?? appointment.start_time));
       if (Number.isNaN(start.getTime())) {
         return Response.json({ error: "Date ou heure invalide." }, { status: 400 });

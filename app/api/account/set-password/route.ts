@@ -1,11 +1,5 @@
-import { hashPassword, requireUser, verifyPassword } from "@/lib/supabase";
-
-const rules = {
-  length: (value: string) => value.length >= 8,
-  uppercase: (value: string) => /[A-Z]/.test(value),
-  number: (value: string) => /\d/.test(value),
-  symbol: (value: string) => /[^A-Za-z0-9]/.test(value),
-};
+import { hashPassword, requireUser, revokeUserSessions, verifyPassword } from "@/lib/supabase";
+import { isStrongPassword, PASSWORD_POLICY_MESSAGE } from "@/lib/password-policy";
 
 export async function POST(request: Request) {
   try {
@@ -15,8 +9,8 @@ export async function POST(request: Request) {
     }
     const body = await request.json();
     const password = String(body.password ?? "");
-    if (!Object.values(rules).every((rule) => rule(password))) {
-      return Response.json({ error: "Le mot de passe doit contenir 8 caractères, une majuscule, un chiffre et un symbole." }, { status: 400 });
+    if (!isStrongPassword(password)) {
+      return Response.json({ error: PASSWORD_POLICY_MESSAGE }, { status: 400 });
     }
     const { data: current, error: currentError } = await supabase
       .from("app_users")
@@ -34,6 +28,16 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .eq("must_change_password", true);
     if (error) throw error;
+    // Les sessions ouvertes avec le mot de passe provisoire ailleurs sont coupées.
+    try {
+      await revokeUserSessions(user.id, { keepCurrent: true });
+    } catch (revokeError) {
+      console.error("[account/set-password] Révocation des sessions impossible :", revokeError);
+      return Response.json(
+        { error: "Mot de passe modifié, mais la déconnexion des autres appareils a échoué. Réessayez plus tard." },
+        { status: 500 },
+      );
+    }
     return Response.json({ ok: true, businessId: user.business_id, onboardingPending: Boolean(user.onboarding_pending) });
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHENTICATED") {
