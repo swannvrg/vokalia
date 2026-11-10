@@ -1,25 +1,146 @@
 import { createSupabaseAdminClient } from "@/lib/supabase";
 import { sendEmail } from "@/lib/email";
+import {
+  containsLinkOrDomain,
+  escapeInvitationNonLinkHtml,
+  invitationValidation,
+  isInvitationRateLimited,
+  isDisposableEmail,
+  isValidInvitationEmail,
+} from "@/lib/invitation-security";
 
 const ADMIN_NOTIFICATION_EMAIL = "swannvrg@gmail.com";
+const RATE_LIMIT_MESSAGE = "Trop de demandes. Veuillez réessayer plus tard.";
+const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    if (String(body.website ?? "").trim()) {
+      return Response.json({ ok: true }, { status: 201 });
+    }
+
     const salonName = String(body.salonName ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
     const phone = String(body.phone ?? "").trim() || null;
+    const normalizedPhone = phone ? phone.replace(/\D/g, "") : null;
     const message = String(body.message ?? "").trim() || null;
 
-    if (!salonName || !email) return Response.json({ error: "Nom du salon et email sont obligatoires." }, { status: 400 });
+    if (!salonName || !email) {
+      return Response.json(
+        { error: "Nom du salon et email sont obligatoires." },
+        { status: 400 },
+      );
+    }
+    if (salonName.length > invitationValidation.maxSalonNameLength) {
+      return Response.json({ error: "Le nom du salon est trop long." }, { status: 400 });
+    }
+    if (
+      email.length > invitationValidation.maxEmailLength ||
+      !isValidInvitationEmail(email)
+    ) {
+      return Response.json({ error: "L'adresse email n'est pas valide." }, { status: 400 });
+    }
+    if (message && message.length > invitationValidation.maxMessageLength) {
+      return Response.json({ error: "Le message est trop long." }, { status: 400 });
+    }
+    if (message && containsLinkOrDomain(message)) {
+      return Response.json(
+        { error: "Les liens ne sont pas acceptés dans ce message." },
+        { status: 400 },
+      );
+    }
+    if (isDisposableEmail(email)) {
+      return Response.json(
+        { error: "Les adresses email temporaires ne sont pas acceptées." },
+        { status: 400 },
+      );
+    }
+    if (phone) {
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (
+        phoneDigits.length < invitationValidation.minPhoneDigits ||
+        phoneDigits.length > invitationValidation.maxPhoneDigits
+      ) {
+        return Response.json(
+          { error: "Le numéro de téléphone doit contenir entre 9 et 15 chiffres." },
+          { status: 400 },
+        );
+      }
+    }
+
+    const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY;
+    if (turnstileSiteKey && turnstileSecretKey) {
+      const turnstileToken = String(body.turnstileToken ?? "");
+      if (!turnstileToken) {
+        return Response.json(
+          { error: "Veuillez confirmer que vous n'êtes pas un robot." },
+          { status: 400 },
+        );
+      }
+      const turnstileResponse = await fetch(TURNSTILE_VERIFY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          secret: turnstileSecretKey,
+          response: turnstileToken,
+          remoteip: getRequestIp(request),
+        }),
+      });
+      const turnstileResult = (await turnstileResponse.json()) as { success?: boolean };
+      if (!turnstileResponse.ok || !turnstileResult.success) {
+        return Response.json(
+          { error: "La vérification anti-robot a échoué. Réessayez." },
+          { status: 400 },
+        );
+      }
+    }
 
     const supabase = createSupabaseAdminClient();
+    const requestIp = getRequestIp(request);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [{ count: ipCount, error: ipCountError }, { count: emailCount, error: emailCountError }, { count: phoneCount, error: phoneCountError }] =
+      await Promise.all([
+        supabase
+          .from("invitation_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("request_ip", requestIp)
+          .gte("created_at", oneHourAgo),
+        supabase
+          .from("invitation_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("email", email)
+          .gte("created_at", oneDayAgo),
+        phone
+          ? supabase
+              .from("invitation_requests")
+              .select("id", { count: "exact", head: true })
+              .eq("phone", normalizedPhone)
+              .gte("created_at", oneDayAgo)
+          : Promise.resolve({ count: 0, error: null }),
+      ]);
+    if (ipCountError) throw ipCountError;
+    if (emailCountError) throw emailCountError;
+    if (phoneCountError) throw phoneCountError;
+    if (
+      isInvitationRateLimited({
+        ip: ipCount ?? 0,
+        email: emailCount ?? 0,
+        phone: phoneCount ?? 0,
+      })
+    ) {
+      return Response.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
+    }
+
     const { error } = await supabase.from("invitation_requests").insert({
       salon_name: salonName,
       contact_name: email,
       email,
-      phone,
+      phone: normalizedPhone,
       message,
+      request_ip: requestIp,
       status: "pending",
     });
     if (error) throw error;
@@ -37,14 +158,14 @@ export async function POST(request: Request) {
     <table style="width:100%;border-collapse:collapse;">
       <tr>
         <td style="padding:8px 0;color:#8C8172;font-size:0.85rem;width:140px;">Salon</td>
-        <td style="padding:8px 0;font-weight:600;">${escapeHtml(salonName)}</td>
+        <td style="padding:8px 0;font-weight:600;">${escapeInvitationNonLinkHtml(salonName)}</td>
       </tr>
       <tr>
         <td style="padding:8px 0;color:#8C8172;font-size:0.85rem;">Email</td>
-        <td style="padding:8px 0;">${escapeHtml(email)}</td>
+        <td style="padding:8px 0;">${escapeInvitationNonLinkHtml(email)}</td>
       </tr>
-      ${phone ? `<tr><td style="padding:8px 0;color:#8C8172;font-size:0.85rem;">Téléphone</td><td style="padding:8px 0;">${escapeHtml(phone)}</td></tr>` : ""}
-      ${message ? `<tr><td style="padding:8px 0;color:#8C8172;font-size:0.85rem;vertical-align:top;">Message</td><td style="padding:8px 0;white-space:pre-wrap;">${escapeHtml(message)}</td></tr>` : ""}
+      ${phone ? `<tr><td style="padding:8px 0;color:#8C8172;font-size:0.85rem;">Téléphone</td><td style="padding:8px 0;">${escapeInvitationNonLinkHtml(phone)}</td></tr>` : ""}
+      ${message ? `<tr><td style="padding:8px 0;color:#8C8172;font-size:0.85rem;vertical-align:top;">Message</td><td style="padding:8px 0;white-space:pre-wrap;">${escapeInvitationNonLinkHtml(message)}</td></tr>` : ""}
     </table>
     <div style="margin-top:28px;">
       <a href="${adminUrl}" style="display:inline-block;padding:10px 22px;background:#BD5B39;color:#F2ECE1;text-decoration:none;border-radius:10px;font-weight:600;font-size:0.95rem;">
@@ -72,6 +193,10 @@ export async function POST(request: Request) {
   }
 }
 
-function escapeHtml(value: string) {
-  return value.replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c] ?? c));
+function getRequestIp(request: Request) {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown"
+  );
 }
