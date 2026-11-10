@@ -10,6 +10,7 @@ const windowsBuildOptions =
 
 const nextConfig: NextConfig = {
   ...(windowsBuildOptions ? { experimental: windowsBuildOptions } : {}),
+  poweredByHeader: false,
   async headers() {
     return [
       {

@@ -22,8 +22,12 @@ function parisOffset(localDate: string, localTime: string): string {
   return match ? match[1] : "+01:00";
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// null = salon inexistant, inactif ou non listé (aucune ligne) ; une vraie erreur de base est relancée.
 async function getBusiness(supabase: ReturnType<typeof createSupabaseAdminClient>, businessId: string) {
-  const { data, error } = await supabase.from("businesses").select("id, name, real_phone_number, address").eq("id", businessId).eq("status", "active").eq("listed", true).single();
+  if (!UUID_REGEX.test(businessId)) return null;
+  const { data, error } = await supabase.from("businesses").select("id, name, real_phone_number, address").eq("id", businessId).eq("status", "active").eq("listed", true).maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -37,7 +41,12 @@ export async function GET(request: Request) {
     const date = params.get("date") || parisDate();
     const serviceId = params.get("serviceId") || "";
     const resourceId = params.get("resourceId") || "";
+    // Facultatifs dans le GET : vérifiés seulement s'ils sont fournis.
+    if ((serviceId && !UUID_REGEX.test(serviceId)) || (resourceId && !UUID_REGEX.test(resourceId))) {
+      return Response.json({ error: "Coiffeur ou prestation invalide." }, { status: 400 });
+    }
     const business = await getBusiness(supabase, businessId);
+    if (!business) return Response.json({ error: "Salon introuvable." }, { status: 404 });
     const [{ data: services, error: servicesError }, { data: resources, error: resourcesError }, { data: businessHours, error: hoursError }] = await Promise.all([
       supabase.from("services").select("id, name, duration_minutes, price").eq("business_id", business.id).eq("active", true).order("name"),
       supabase.from("resources").select("id, name, capacity, active, color").eq("business_id", business.id).eq("resource_type", "practitioner").eq("active", true).order("name"),
@@ -128,6 +137,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const businessId = String(body.businessId ?? "");
     if (!businessId) return Response.json({ error: "Salon non spécifié." }, { status: 400 });
+    if (!UUID_REGEX.test(businessId)) return Response.json({ error: "Salon introuvable." }, { status: 404 });
     if (String(body.website ?? "").trim()) return Response.json({ ok: true }, { status: 201 });
     const name = String(body.customerName ?? "").trim();
     const rawPhone = String(body.customerPhone ?? "").trim();
@@ -137,6 +147,9 @@ export async function POST(request: Request) {
     const serviceId = String(body.serviceId ?? "");
     const startTime = String(body.startTime ?? "");
     if (!name || !resourceId || !serviceId || !startTime) return Response.json({ error: "Veuillez remplir tous les champs obligatoires." }, { status: 400 });
+    if (!UUID_REGEX.test(resourceId) || !UUID_REGEX.test(serviceId)) {
+      return Response.json({ error: "Coiffeur ou prestation invalide." }, { status: 400 });
+    }
     if (name.length > 80 || /[<>]/.test(name) || containsLinkOrDomain(name)) {
       return Response.json({ error: "Le prénom n'est pas valide." }, { status: 400 });
     }
