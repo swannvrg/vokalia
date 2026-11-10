@@ -6,6 +6,7 @@ import Link from "next/link";
 import { SLOT_STEP_MINUTES } from "@/lib/constants";
 import { usePageReady } from "@/app/components/PageTransitionProvider";
 import { formatPhoneDisplay } from "@/lib/format-phone";
+import TurnstileWidget from "@/app/components/TurnstileWidget";
 
 type Service = {
   id: string;
@@ -195,6 +196,8 @@ export default function BookingForm({ businessId }: { businessId: string }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [currentTime, setCurrentTime] = useState<number | null>(null);
@@ -355,6 +358,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
           businessId,
           customerName: name.trim(),
           customerPhone: phone.trim(),
+          turnstileToken,
           resourceId: selectedSlot.resource_id,
           serviceId,
           startTime: selectedSlot.slot_start,
@@ -647,6 +651,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
                 </section>
 
                 <section className="bk-section bk-fields">
+                  <input aria-hidden="true" autoComplete="off" name="website" tabIndex={-1} style={{ display: "none" }} />
                   <div className="field">
                     <label htmlFor="booking-service">Prestation</label>
                     <select
@@ -693,6 +698,7 @@ export default function BookingForm({ businessId }: { businessId: string }) {
                     </div>
                   )}
                 </section>
+                {turnstileSiteKey && <TurnstileWidget onToken={setTurnstileToken} />}
 
                 <section className="bk-section" aria-live="polite">
                   <h2 className="bk-title">Créneaux disponibles</h2>

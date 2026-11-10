@@ -4,6 +4,8 @@ import { normalizeFrenchPhone } from "@/lib/format-phone";
 import { SLOT_STEP_MINUTES } from "@/lib/constants";
 import { sendEmail } from "@/lib/email";
 import { buildBookingMessage } from "@/lib/booking-message";
+import { containsLinkOrDomain } from "@/lib/invitation-security";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const parisDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
 
@@ -20,7 +22,7 @@ function parisOffset(localDate: string, localTime: string): string {
 }
 
 async function getBusiness(supabase: ReturnType<typeof createSupabaseAdminClient>, businessId: string) {
-  const { data, error } = await supabase.from("businesses").select("id, name, real_phone_number, address, timezone").eq("id", businessId).eq("status", "active").single();
+  const { data, error } = await supabase.from("businesses").select("id, name, real_phone_number, address").eq("id", businessId).eq("status", "active").eq("listed", true).single();
   if (error) throw error;
   return data;
 }
@@ -125,17 +127,67 @@ export async function POST(request: Request) {
     const body = await request.json();
     const businessId = String(body.businessId ?? "");
     if (!businessId) return Response.json({ error: "Salon non spécifié." }, { status: 400 });
+    if (String(body.website ?? "").trim()) return Response.json({ ok: true }, { status: 201 });
     const name = String(body.customerName ?? "").trim();
-    const phone = normalizeFrenchPhone(String(body.customerPhone ?? ""));
+    const rawPhone = String(body.customerPhone ?? "").trim();
+    const phone = normalizeFrenchPhone(rawPhone);
+    const note = String(body.note ?? "").trim();
     const resourceId = String(body.resourceId ?? "");
     const serviceId = String(body.serviceId ?? "");
     const startTime = String(body.startTime ?? "");
     if (!name || !resourceId || !serviceId || !startTime) return Response.json({ error: "Veuillez remplir tous les champs obligatoires." }, { status: 400 });
+    if (name.length > 80 || /[<>]/.test(name) || containsLinkOrDomain(name)) {
+      return Response.json({ error: "Le prénom n'est pas valide." }, { status: 400 });
+    }
+    if (rawPhone.replace(/\D/g, "").length > 15) {
+      return Response.json({ error: "Le numéro de téléphone est trop long." }, { status: 400 });
+    }
+    if (note.length > 500) {
+      return Response.json({ error: "La note est trop longue." }, { status: 400 });
+    }
     if (!phone) return Response.json({ error: "Numéro de téléphone invalide. Utilisez 06 12 34 56 78 ou +33 6 12 34 56 78." }, { status: 400 });
     if (Number.isNaN(new Date(startTime).getTime())) return Response.json({ error: "Date ou heure invalide." }, { status: 400 });
+    const requestIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim() || "unknown";
+    if (!(await verifyTurnstileToken(String(body.turnstileToken ?? ""), requestIp))) {
+      if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY) {
+        return Response.json({ error: "La vérification anti-robot a échoué. Réessayez." }, { status: 400 });
+      }
+    }
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: ipCount, error: ipError } = await supabase
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("request_ip", requestIp)
+      .gte("created_at", oneHourAgo);
+    if (ipError) throw ipError;
 
     const { data: resource, error: resourceError } = await supabase.from("resources").select("business_id, name").eq("id", resourceId).eq("business_id", businessId).eq("resource_type", "practitioner").eq("active", true).single();
     if (resourceError || !resource) return Response.json({ error: "Ce Coiffeur n'est plus disponible." }, { status: 400 });
+    const { data: matchingCustomers, error: customerError } = await supabase.from("customers").select("id").eq("phone_number", phone);
+    if (customerError) throw customerError;
+    const customerIds = (matchingCustomers ?? []).map((customer) => customer.id);
+    if ((ipCount ?? 0) >= 3) return Response.json({ error: "Trop de demandes de réservation. Veuillez réessayer plus tard." }, { status: 429 });
+    if (customerIds.length > 0) {
+      const { count: phoneCount, error: phoneError } = await supabase
+        .from("appointments")
+        .select("id", { count: "exact", head: true })
+        .in("customer_id", customerIds)
+        .gte("created_at", oneDayAgo);
+      if (phoneError) throw phoneError;
+      if ((phoneCount ?? 0) >= 1) return Response.json({ error: "Trop de demandes pour ce numéro. Veuillez réessayer demain." }, { status: 429 });
+
+      const { count: futureCount, error: futureError } = await supabase
+        .from("appointments")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
+        .in("customer_id", customerIds)
+        .gte("start_time", new Date().toISOString())
+        .in("status", ["confirmed", "pending"]);
+      if (futureError) throw futureError;
+      if ((futureCount ?? 0) >= 3) return Response.json({ error: "Ce numéro a déjà 3 réservations futures dans ce salon." }, { status: 429 });
+    }
     const { data: service, error: serviceError } = await supabase.from("services").select("name, duration_minutes, price").eq("id", serviceId).eq("business_id", resource.business_id).eq("active", true).single();
     if (serviceError || !service) return Response.json({ error: "Cette prestation n'est plus disponible." }, { status: 400 });
     if (!(await isWithinOpeningHours(supabase, resource.business_id, new Date(startTime), service.duration_minutes))) {
@@ -164,12 +216,13 @@ export async function POST(request: Request) {
         price: service.price,
         startTime,
         resourceName: resource.name,
+        note,
         isTest: true,
       });
       void sendEmail({
           to: recipient,
           subject: message.subject,
-          html: message.text.replace(/\n/g, "<br>"),
+          html: message.html,
           text: message.text,
         }).catch((sendError: unknown) => {
         console.error("[public-booking] confirmation email failed", {
@@ -179,7 +232,45 @@ export async function POST(request: Request) {
     }
     return Response.json({ id: data }, { status: 201 });
   } catch (error) {
+    if (isBookingDatabaseError(error)) {
+      console.error("[public-booking] Database error:", error);
+      return Response.json(
+        {
+          error:
+            "Les réservations sont momentanément indisponibles. Veuillez réessayer plus tard.",
+        },
+        { status: 503 },
+      );
+    }
     console.error(error);
     return Response.json({ error: "Impossible de confirmer le rendez-vous." }, { status: 500 });
   }
+}
+
+function isBookingDatabaseError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const databaseError = error as {
+    message?: string;
+    code?: string;
+    details?: string;
+    hint?: string;
+  };
+  const details = [
+    databaseError.message,
+    databaseError.code,
+    databaseError.details,
+    databaseError.hint,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return (
+    Boolean(databaseError.code) ||
+    details.includes("column") ||
+    details.includes("database") ||
+    details.includes("relation") ||
+    details.includes("pgrst") ||
+    details.includes("connection") ||
+    details.includes("timeout")
+  );
 }

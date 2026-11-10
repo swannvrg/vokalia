@@ -9,8 +9,19 @@ export type BookingMessageInput = {
   price?: number | null;
   startTime: string;
   resourceName?: string | null;
+  note?: string | null;
   isTest?: boolean;
 };
+
+export function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  })[character] ?? character);
+}
 
 const parisDateTime = (value: string) => {
   const date = new Date(value);
@@ -50,6 +61,7 @@ const optionalLines = (booking: BookingMessageInput, date: string, time: string)
     booking.resourceName ? `Avec : ${booking.resourceName}` : "",
     booking.address ? `Où : ${booking.salonName}, ${booking.address}` : `Où : ${booking.salonName}`,
     booking.salonPhone ? `Une question ? ${booking.salonPhone}` : "",
+    booking.note ? `Note : ${booking.note}` : "",
   ].filter(Boolean);
 };
 
@@ -70,9 +82,16 @@ export function buildBookingMessage(booking: BookingMessageInput) {
   const text = `${header}Bonjour ${booking.customerName},\nVotre rendez-vous est confirmé.\n${lines.join(
     "\n",
   )}\nÀ bientôt !`;
+  const html = [
+    header ? `<p>${escapeHtml(header.trim())}</p>` : "",
+    `<p>Bonjour ${escapeHtml(booking.customerName)},</p>`,
+    "<p>Votre rendez-vous est confirmé.</p>",
+    `<ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
+    "<p>À bientôt !</p>",
+  ].filter(Boolean).join("");
   const sms = truncateSms(`${booking.salonName} : RDV confirmé ${date} à ${time} - ${booking.serviceName}${
     booking.resourceName ? ` avec ${booking.resourceName}` : ""
   }.${booking.salonPhone ? ` Tel ${booking.salonPhone}.` : ""}`);
 
-  return { subject, text, sms };
+  return { subject, text, html, sms };
 }

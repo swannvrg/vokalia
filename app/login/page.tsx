@@ -5,6 +5,16 @@ import { useTransitionRouter } from "@/app/components/PageTransitionProvider";
 import Toast from "@/app/components/toast";
 import Logo from "@/app/components/Logo";
 
+function isSafeInternalRedirect(value: string) {
+  if (value !== "/" && !/^\/[^/\\]/.test(value)) return false;
+  if (value.includes("://") || /[\s\p{Cc}]/u.test(value)) return false;
+  try {
+    return !/[\s\p{Cc}]/u.test(decodeURIComponent(value));
+  } catch {
+    return false;
+  }
+}
+
 export default function LoginPage() {
   const router = useTransitionRouter();
   const [email, setEmail] = useState("");
@@ -34,7 +44,7 @@ export default function LoginPage() {
         router.replace("/bienvenue/mot-de-passe");
       } else if (result.onboardingPending && result.businessId) {
         router.replace(`/${result.businessId}/onboarding`);
-      } else if (redirectParam && redirectParam.startsWith("/")) {
+      } else if (redirectParam && isSafeInternalRedirect(redirectParam)) {
         router.replace(redirectParam);
       } else if (result.role === "admin") {
         router.replace("/admin");

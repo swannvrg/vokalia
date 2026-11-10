@@ -33,12 +33,7 @@ export async function GET(request: Request) {
     }
     console.error(error);
     return Response.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Impossible de charger le calendrier.",
-      },
+      { error: "Impossible de charger le calendrier." },
       { status: 500 },
     );
   }

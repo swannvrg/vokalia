@@ -8,10 +8,10 @@ import {
   isDisposableEmail,
   isValidInvitationEmail,
 } from "@/lib/invitation-security";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const ADMIN_NOTIFICATION_EMAIL = "swannvrg@gmail.com";
 const RATE_LIMIT_MESSAGE = "Trop de demandes. Veuillez réessayer plus tard.";
-const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 export async function POST(request: Request) {
   try {
@@ -69,27 +69,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-    const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY;
-    if (turnstileSiteKey && turnstileSecretKey) {
-      const turnstileToken = String(body.turnstileToken ?? "");
-      if (!turnstileToken) {
-        return Response.json(
-          { error: "Veuillez confirmer que vous n'êtes pas un robot." },
-          { status: 400 },
-        );
-      }
-      const turnstileResponse = await fetch(TURNSTILE_VERIFY_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          secret: turnstileSecretKey,
-          response: turnstileToken,
-          remoteip: getRequestIp(request),
-        }),
-      });
-      const turnstileResult = (await turnstileResponse.json()) as { success?: boolean };
-      if (!turnstileResponse.ok || !turnstileResult.success) {
+    if (!(await verifyTurnstileToken(String(body.turnstileToken ?? ""), getRequestIp(request)))) {
+      if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY) {
         return Response.json(
           { error: "La vérification anti-robot a échoué. Réessayez." },
           { status: 400 },
