@@ -1,6 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase";
 import { sendEmail } from "@/lib/email";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 // ---------------------------------------------------------------------------
 // Runtime Node obligatoire (nodemailer ne fonctionne pas en Edge)
@@ -8,22 +8,31 @@ import { timingSafeEqual } from "node:crypto";
 export const runtime = "nodejs";
 
 // ---------------------------------------------------------------------------
-// Vérification du secret webhook — comparaison à temps constant
+// Vérification du secret webhook — comparaison à temps constant.
+// Pendant un changement de secret, deux valeurs sont acceptées :
+// CALLBACK_WEBHOOK_SECRET (nouvelle) et CALLBACK_WEBHOOK_SECRET_PREVIOUS (ancienne, facultative).
+// On compare les empreintes SHA-256 (longueur fixe) pour ne rien révéler de la longueur attendue.
 // ---------------------------------------------------------------------------
+function sha256(value: string): Buffer {
+  return createHash("sha256").update(value, "utf-8").digest();
+}
+
 function isAuthorized(request: Request): boolean {
-  const expected = process.env.CALLBACK_WEBHOOK_SECRET;
-  if (!expected) return false;
+  const accepted = [process.env.CALLBACK_WEBHOOK_SECRET, process.env.CALLBACK_WEBHOOK_SECRET_PREVIOUS]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+  if (accepted.length === 0) return false;
 
   const received = request.headers.get("x-webhook-secret") ?? "";
   if (received.length === 0) return false;
 
-  try {
-    const a = Buffer.from(received, "utf-8");
-    const b = Buffer.from(expected, "utf-8");
-    return a.length === b.length && timingSafeEqual(a, b);
-  } catch {
-    return false;
+  const receivedHash = sha256(received);
+  // Toutes les valeurs sont comparées (pas d'arrêt au premier résultat) : temps constant.
+  let ok = false;
+  for (const expected of accepted) {
+    if (timingSafeEqual(receivedHash, sha256(expected))) ok = true;
   }
+  return ok;
 }
 
 // ---------------------------------------------------------------------------
