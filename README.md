@@ -18,10 +18,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Notifications de réservation
 
-Configurez `BOOKING_NOTIFY_EMAIL` avec l'adresse qui doit recevoir les
-notifications des réservations en ligne. L'envoi utilise le même transport
-SMTP que les autres emails transactionnels et ne fait pas échouer une
-réservation si le serveur SMTP est indisponible.
+Les confirmations de création de rendez-vous sont envoyées par le endpoint
+Next.js `/api/booking-confirm-notify` après insertion. Configurez
+`DEMO_EMAIL_TO` sur l'hébergement du site. Le hook Supabase réutilise le secret
+`CALLBACK_WEBHOOK_SECRET` déjà utilisé par le rappel. La confirmation ne bloque
+pas la réservation et est dédupliquée par rendez-vous.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

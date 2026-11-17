@@ -38,9 +38,22 @@ function escapeHtml(value: string) {
 // ---------------------------------------------------------------------------
 // Envoi générique — destinataire, sujet, corps HTML (+ fallback texte brut)
 // ---------------------------------------------------------------------------
-export async function sendEmail({ to, subject, html, text }: { to: string; subject: string; html: string; text?: string }) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  fromName,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  fromName?: string;
+}) {
   const transporter = createTransporter();
-  const from = `Vokalia <${process.env.SMTP_USER}>`;
+  const safeFromName = (fromName?.trim() || "Vokalia").replace(/["\\]/g, "\\$&");
+  const from = `"${safeFromName}" <${process.env.SMTP_USER}>`;
 
   try {
     await transporter.sendMail({ from, to, subject, html, text: text ?? html.replace(/<[^>]+>/g, " ") });
